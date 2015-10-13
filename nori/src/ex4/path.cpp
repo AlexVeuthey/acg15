@@ -20,7 +20,7 @@ NORI_NAMESPACE_BEGIN
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // put your group number here!
-#define GROUP_NUMBER 0
+#define GROUP_NUMBER 8
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 GROUP_NAMESPACE_BEGIN()
