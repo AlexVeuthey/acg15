@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<scene>
+	<integrator type="path"/>
+	
+	<sampler type="independent">
+		<integer name="sampleCount" value="1024"/>
+	</sampler>
+
+	<camera type="perspective">
+		<transform name="toWorld">
+			<scale value="-1,1,1"/>
+			<lookat origin="278, 273, -800" target="278, 273, -799" up="0, 1, 0"/>
+		</transform>
+		<float name="fov" value="39.3077"/>
+		<integer name="width" value="512"/>
+		<integer name="height" value="512"/>
+	</camera>
+
+	<!-- floor-->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_2a.obj"/>
+		<transform name="toWorld">
+			<translate value="-552, -552, 0"/>
+			<rotate axis="0, 0, 1" angle="-180"/>
+		</transform>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.76, 0.75, 0.5"/>
+		</bsdf>
+	</mesh>
+	
+	<!-- top-->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_2a.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.76, 0.75, 0.5"/>
+		</bsdf>
+	</mesh>
+	
+	<!-- back-->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_3.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.76, 0.75, 0.5"/>
+		</bsdf>
+
+	</mesh>
+
+	<!-- back light -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_1.obj"/>
+		<transform name="toWorld">
+			<rotate axis="1, 0, 0" angle="90"/>
+			<translate value="0, 400, 10.35"/>
+		</transform>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.76, 0.75, 0.5"/>
+		</bsdf>
+		<luminaire type="area">
+			<color name="radiance" value="17, 11.8, 4"/>
+		</luminaire>
+	</mesh>
+
+ 	<!-- right -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_4.obj"/>	
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.15, 0.98, 0.09"/>
+		</bsdf>
+	</mesh>
+	
+	<!-- left -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cbox_5.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.63, 0.06, 0.04"/>
+		</bsdf>
+	</mesh>
+
+	<!-- ACG cube -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cubeacg.obj"/>
+		<transform name="toWorld">
+			<scale value="1.4, 1.4, 1.4"/>
+			<translate value="-310, 0, -300"/>
+			<rotate axis="0, 1, 0" angle="150"/>
+		</transform>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.9, 0.1, 0.3"/>
+		</bsdf>
+	</mesh>
+
+	<!-- hiding cube -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/cubeacg.obj"/>
+		<transform name="toWorld">
+			<scale value="3, 0.2, 4"/>
+			<translate value="280, 230, 480"/>
+		</transform>
+		<bsdf type="phong">
+			<color name="kd" value="0.2, 0.3, 0.1"/>
+                        <color name="ks" value="1.0, 1.0, 1.0"/>
+                        <float name="n" value="100"/>
+		</bsdf>
+	</mesh>
+
+	<!-- Group 8 -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/group8.obj"/>
+		<transform name="toWorld">
+			<scale value="2, 2, 2"/>
+			<translate value="-170, 0, -500"/>
+			<rotate axis="0, 1, 0" angle="210"/>
+		</transform>
+		<bsdf type="phong">
+			<color name="kd" value="0.0, 0.0, 0.0"/>
+                        <color name="ks" value="1.0, 1.0, 1.0"/>
+                        <float name="n" value="500"/>
+		</bsdf>
+	</mesh>
+
+	<!-- Bunny -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/bunny.obj"/>
+		<transform name="toWorld">
+			<rotate axis="0, 1, 0" angle="180"/>
+			<scale value="50, 50, 50"/>
+			<translate value="280, 260, 480"/>
+		</transform>
+		<bsdf type="phong">
+			<color name="kd" value="0.1, 0, 0"/>
+                        <color name="ks" value="1.0, 0.5, 0.5"/>
+                        <float name="n" value="200"/>
+		</bsdf>
+	</mesh>
+
+	<evaluator type="variance">
+
+		<!-- computation reference, do not change! -->
+		<string name="reference" value="cbox-ref.exr"/>
+
+		 <!-- export name(s) -->
+		<string name="output" value="cbox-path_plot_%1.png"/>
+	     
+		<!-- plotting parameters, you can change! -->
+		<integer name="cuts" value="100"/>
+		<boolean name="absDiff" value="false"/>
+
+		<!-- <color name="barRatio" value="0.8, 0.5, 0.1"/> -->
+		<boolean name="semilogy" value="true"/>
+		<float name="logbase" value="10.0"/>
+		<float name="logmin" value="0.5"/>
+		<boolean name="stacked" value="false"/>
+		<boolean name="split" value="true"/>
+		<color name="redFill" value="254, 200, 200"/>
+		<color name="redPen" value="255, 98, 107"/>
+		<color name="greenFill" value="170, 255, 170"/>
+		<color name="greenPen" value="65, 195, 59"/>
+		<color name="blueFill" value="200, 200, 254"/>
+		<color name="bluePen" value="101, 101, 247"/>
+		<color name="alphaPen" value="255, 255, 255"/>
+		<color name="alphaFill" value="200, 200, 200"/>
+	</evaluator>
+</scene>

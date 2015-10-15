@@ -1,0 +1,8 @@
+The folder "ourscene" relates to exercise 4.2.3, and contains images to include in the report.
+   - acg8_q=XXX_256s are images with a fixed number of 256 samples per pixel, q is set to XXX
+   - acg8_q=XXX_50sec_YYYsam are images with a "fixed" number of seconds for rendering (50), q is set to XXX, and the setting to reach almost 50 seconds of rendering is to set YYY samples per pixel
+   - acg8_onlydirect_256 is an image rendered with a fixed number of 256 samples per pixel, and only the light and direct illumination are taken into account, no indirect illumination (could be nice to put in report before other images, to show what the light exactly radiates to, because scene can be difficult to understand... Big plate above the light where bunny is standing is almost a mirror.)
+
+The folder "objsrc" contains the .MAX source files used to create the ACG cube and the "Group 8" models. Software used to create those is Autodesk 3D Studio Max.
+
+The folder "others" contains various images that I rendered during development and tests.

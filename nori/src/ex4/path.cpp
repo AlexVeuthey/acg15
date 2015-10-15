@@ -108,8 +108,11 @@ public:
                 Intersection its;
                 Color3f result(0.0f), throughput(1.0f);
                 int bounces = 0;
+                bool cutOff = false;
+                double q = 0.1;
 
-                for (bounces = 0; bounces < 2; bounces++)
+                //for (bounces = 0; bounces < 2; bounces++)
+                while (!cutOff)
                 {
                     // Step 1: Intersect the ray with the scene. Return environment
                     // luminaire if no hit.
@@ -153,7 +156,21 @@ public:
                     ray = Ray3f(its.p, its.toWorld(bRecInd.wo));
 
                     // Step 5. Apply Russioan Roullette after 2 main bounces.
-                    // TODO
+                    if (bounces >= 1)
+                    {
+                        double qx = sampler->next1D();
+                        if (qx > q)
+                        {
+                            throughput *= (double) 1.0 / (double)(1-q);
+                        }
+                        else
+                        {
+                            cutOff = true;
+                        }
+                    }
+
+                    // Increment bounces number
+                    bounces++;
                 }
 
                 return result;
