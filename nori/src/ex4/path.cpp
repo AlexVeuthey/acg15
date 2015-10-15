@@ -107,19 +107,54 @@ public:
                 Ray3f ray(_ray);
                 Intersection its;
                 Color3f result(0.0f), throughput(1.0f);
+                int bounces = 0;
 
-                // TODO implement a path tracer
+                for (bounces = 0; bounces < 2; bounces++)
+                {
+                    // Step 1: Intersect the ray with the scene. Return environment
+                    // luminaire if no hit.
+                    // This means that we have to return the current result we have,
+                    // which will never be augmented again because ray is going "nowhere"
+                    // but can already be non-zero if bounces > 0.
+                    if (!scene->rayIntersect(ray, its))
+                    {
+                        return result;
+                    }
 
-                // Step 1: Intersect the ray with the scene. Return environment
-                // luminaire if no hit.
+                    // Step 2: Check if the ray hit a light source.
+                    if (its.mesh->isLuminaire())
+                    {
+                        // TODO Don't know what to do here exactly...
+                        //LuminaireQueryRecord lRecDir(its.mesh->getLuminaire(), ray.o, its.p, its.shFrame.n);
+                        //result += throughput * its.mesh->getLuminaire()->eval(lRecDir);
+                        if (bounces == 0)
+                        {
+                            return its.mesh->getLuminaire()->getColor();
+                        }
+                        else
+                        {
+                            return result;
+                        }
+                    }
 
-                // Step 2: Check if the ray hit a light source.
+                    // Step 3: Direct illumination sampling.
+                    // Sample the light intensity from a random light,
+                    // then apply the BRDF for sampled direction and take current throughput into account.
+                    LuminaireQueryRecord lRec(its.p);
+                    Color3f lightIntensity = sampleLights(scene, lRec, sampler->next2D());
+                    BSDFQueryRecord bRec(its.toLocal(-ray.d/sqrt(ray.d[0]*ray.d[0]+ray.d[1]*ray.d[1]+ray.d[2]*ray.d[2])), its.toLocal(lRec.d), ESolidAngle);
+                    result += throughput * lightIntensity * its.mesh->getBSDF()->eval(bRec);
 
-                // Step 3: Direct illumination sampling.
+                    // Step 4: Recursively sample indirect illumination
+                    // Sample a new direction according to BRDF, modify throughput accordingly,
+                    // then prepare the corresponding ray for the next iterative recursion step.
+                    BSDFQueryRecord bRecInd(its.toLocal(-ray.d/sqrt(ray.d[0]*ray.d[0]+ray.d[1]*ray.d[1]+ray.d[2]*ray.d[2])));
+                    throughput *= its.mesh->getBSDF()->sample(bRecInd, sampler->next2D());
+                    ray = Ray3f(its.p, its.toWorld(bRecInd.wo));
 
-                // Step 4: Recursively sample indirect illumination
-
-                // Step 5. Apply Russion Roullette after 2 main bounces.
+                    // Step 5. Apply Russioan Roullette after 2 main bounces.
+                    // TODO
+                }
 
                 return result;
         }
