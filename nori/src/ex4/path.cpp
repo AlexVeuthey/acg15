@@ -116,7 +116,7 @@ public:
          Ray3f ray(_ray);
          Intersection its;
          Color3f result(0.0f), throughput(1.0f);
-         const int NB_BOUNCES = 10;
+         const int NB_BOUNCES = 10000;
          float q = 0.1;
          
          // TODO implement a path tracer
@@ -162,7 +162,7 @@ public:
                return result;
             }
             else if(i >= 2){
-               throughput *= 1.f/(1-q);
+               throughput *= 1.f/(1.0-q);
             }
          }
          
