@@ -116,10 +116,11 @@ public:
          Ray3f ray(_ray);
          Intersection its;
          Color3f result(0.0f), throughput(1.0f);
+         const int NB_BOUNCES = 1;
          
          // TODO implement a path tracer
          
-         for(int i = 0; i < 1; i++){
+         for(int i = 0; i <= NB_BOUNCES; i++){
          
             // Step 1: Intersect the ray with the scene. Return environment
             // luminaire if no hit.
@@ -131,6 +132,9 @@ public:
             const BSDF *bsdf = mesh->getBSDF();
             
             if( mesh->isLuminaire() ){
+               if(i != 0){
+                  return result;
+               }
                const Luminaire *luminaire = its.mesh->getLuminaire();
                LuminaireQueryRecord lqr(luminaire, ray.o, its.p, its.shFrame.n);
                return luminaire->eval(lqr);
@@ -144,11 +148,12 @@ public:
             
             BSDFQueryRecord bRec(its.toLocal(-ray.d/length(ray.d)), its.toLocal(lqr.d), ESolidAngle);
             
-            result += light_sample*bsdf->eval(bRec)*throughput * dot(its.shFrame.n, lqr.d);
+            result += light_sample*bsdf->eval(bRec) * throughput * dot(its.shFrame.n, lqr.d);
             
-            //throughput *= bsdf->eval(bRec);
+            throughput *= bsdf->eval(bRec)*2;
             
-            //bsdf->sample(bRec, sampler->next2D());
+            bsdf->sample(bRec, sampler->next2D());
+            ray = Ray3f(its.p, its.toWorld(bRec.wo));
             //ray.o = its.p;
             //ray.d = bRec.wo;
          }
