@@ -116,7 +116,8 @@ public:
          Ray3f ray(_ray);
          Intersection its;
          Color3f result(0.0f), throughput(1.0f);
-         const int NB_BOUNCES = 2;
+         const int NB_BOUNCES = 10;
+         float q = 0.1;
          
          // TODO implement a path tracer
          
@@ -155,11 +156,17 @@ public:
             
             //next ray, going from the current point to the direction of W_o
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
+            
+            // Step 5. Apply Russion Roullette after 2 main bounces.
+            if(i >= 2 && sampler->next1D() < q){
+               return result;
+            }
+            else if(i >= 2){
+               throughput *= 1.f/(1-q);
+            }
          }
          
          
-         
-         // Step 5. Apply Russion Roullette after 2 main bounces.
          ///TODO
          
          return result;
