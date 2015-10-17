@@ -116,7 +116,7 @@ public:
          Ray3f ray(_ray);
          Intersection its;
          Color3f result(0.0f), throughput(1.0f);
-         const int NB_BOUNCES = 1;
+         const int NB_BOUNCES = 2;
          
          // TODO implement a path tracer
          
@@ -150,17 +150,17 @@ public:
             
             result += light_sample*bsdf->eval(bRec) * throughput * dot(its.shFrame.n, lqr.d);
             
-            throughput *= bsdf->eval(bRec)*2;
+            // Step 4: Recursively sample indirect illumination
+            throughput *= bsdf->sample(bRec, sampler->next2D());
             
-            bsdf->sample(bRec, sampler->next2D());
+            //next ray, going from the current point to the direction of W_o
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
-            //ray.o = its.p;
-            //ray.d = bRec.wo;
          }
          
-         // Step 4: Recursively sample indirect illumination
+         
          
          // Step 5. Apply Russion Roullette after 2 main bounces.
+         ///TODO
          
          return result;
         }
