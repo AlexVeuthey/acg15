@@ -25,6 +25,15 @@ NORI_NAMESPACE_BEGIN
 
 GROUP_NAMESPACE_BEGIN()
 
+float length(Vector3f &vec){
+   return sqrt(vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
+}
+
+float dot(Normal3f &vec1, const Vector3f &vec2){
+   return vec1[0]*vec2[0]+vec1[1]*vec2[1]+vec1[2]*vec2[2];
+}
+
+
 /**
  * Simple path tracer implementation
  */
@@ -104,24 +113,51 @@ public:
         }
 
         Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &_ray) const {
-                Ray3f ray(_ray);
-                Intersection its;
-                Color3f result(0.0f), throughput(1.0f);
-
-                // TODO implement a path tracer
-
-                // Step 1: Intersect the ray with the scene. Return environment
-                // luminaire if no hit.
-
-                // Step 2: Check if the ray hit a light source.
-
-                // Step 3: Direct illumination sampling.
-
-                // Step 4: Recursively sample indirect illumination
-
-                // Step 5. Apply Russion Roullette after 2 main bounces.
-
-                return result;
+         Ray3f ray(_ray);
+         Intersection its;
+         Color3f result(0.0f), throughput(1.0f);
+         
+         // TODO implement a path tracer
+         
+         for(int i = 0; i < 1; i++){
+         
+            // Step 1: Intersect the ray with the scene. Return environment
+            // luminaire if no hit.
+            if (!scene->rayIntersect(ray, its))
+               return result;
+            
+            // Step 2: Check if the ray hit a light source.
+            const Mesh *mesh = its.mesh;
+            const BSDF *bsdf = mesh->getBSDF();
+            
+            if( mesh->isLuminaire() ){
+               const Luminaire *luminaire = its.mesh->getLuminaire();
+               LuminaireQueryRecord lqr(luminaire, ray.o, its.p, its.shFrame.n);
+               return luminaire->eval(lqr);
+            }
+            
+            // Step 3: Direct illumination sampling.
+            LuminaireQueryRecord lqr(its.p);
+            
+            //lqr will be modified in this function and will have the wo at x' in lqr.d
+            Color3f light_sample = sampleLights(scene, lqr, sampler->next2D());
+            
+            BSDFQueryRecord bRec(its.toLocal(-ray.d/length(ray.d)), its.toLocal(lqr.d), ESolidAngle);
+            
+            result += light_sample*bsdf->eval(bRec)*throughput * dot(its.shFrame.n, lqr.d);
+            
+            //throughput *= bsdf->eval(bRec);
+            
+            //bsdf->sample(bRec, sampler->next2D());
+            //ray.o = its.p;
+            //ray.d = bRec.wo;
+         }
+         
+         // Step 4: Recursively sample indirect illumination
+         
+         // Step 5. Apply Russion Roullette after 2 main bounces.
+         
+         return result;
         }
 
         QString toString() const {
