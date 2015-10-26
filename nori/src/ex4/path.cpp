@@ -25,6 +25,10 @@ NORI_NAMESPACE_BEGIN
 
 GROUP_NAMESPACE_BEGIN()
 
+float dot(Normal3f &vec1, const Vector3f &vec2){
+   return vec1[0]*vec2[0]+vec1[1]*vec2[1]+vec1[2]*vec2[2];
+}
+
 /**
  * Simple path tracer implementation
  */
@@ -108,11 +112,12 @@ public:
                 Intersection its;
                 Color3f result(0.0f), throughput(1.0f);
                 int bounces = 0;
+                const int MAX_BOUNCES = 10000; //put a limit to the max number of bounces
                 bool cutOff = false;
-                double q = 0.1;
+                double q = 1.0;
 
                 //for (bounces = 0; bounces < 2; bounces++)
-                while (!cutOff)
+                while (!cutOff && bounces < MAX_BOUNCES)
                 {
                     // Step 1: Intersect the ray with the scene. Return environment
                     // luminaire if no hit.
@@ -146,7 +151,7 @@ public:
                     LuminaireQueryRecord lRec(its.p);
                     Color3f lightIntensity = sampleLights(scene, lRec, sampler->next2D());
                     BSDFQueryRecord bRec(its.toLocal(-ray.d/sqrt(ray.d[0]*ray.d[0]+ray.d[1]*ray.d[1]+ray.d[2]*ray.d[2])), its.toLocal(lRec.d), ESolidAngle);
-                    result += throughput * lightIntensity * its.mesh->getBSDF()->eval(bRec);
+                    result += throughput * lightIntensity * its.mesh->getBSDF()->eval(bRec) * dot(its.shFrame.n, lRec.d);
 
                     // Step 4: Recursively sample indirect illumination
                     // Sample a new direction according to BRDF, modify throughput accordingly,
