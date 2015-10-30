@@ -364,7 +364,20 @@ void Mass_spring_viewer::time_integration(float dt)
             /** \todo (Part 1) Implement Euler integration scheme
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
+            for (unsigned int i=0;i<body_.particles.size();i++)
+            {
+                Particle p = body_.particles[i];
 
+                // update positions
+                p.position = p.position + dt*p.velocity;
+
+                // compute acceleration from forces
+                compute_forces();
+                vec2 acceleration = p.force/p.mass;
+
+                // update velocities
+                p.velocity = p.velocity + dt*acceleration;
+            }
 
             break;
         }
