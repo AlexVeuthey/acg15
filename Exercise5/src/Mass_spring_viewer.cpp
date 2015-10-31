@@ -376,6 +376,10 @@ void Mass_spring_viewer::time_integration(float dt)
             //update velocities
             for (unsigned int i=0; i<body_.particles.size(); ++i){
                Particle *p = &body_.particles.at(i);
+               
+               //calculate the new acceleration using newton's second law
+               p->acceleration = p->force/p->mass;
+               
                p->velocity = p->velocity + dt*p->acceleration;
             }
             
@@ -422,49 +426,56 @@ void Mass_spring_viewer::time_integration(float dt)
 void
 Mass_spring_viewer::compute_forces()
 {
+    const int C = 20; //central force
+    const double G = 9.81; //gravity force
+    
     // clear forces
-    for (unsigned int i=0; i<body_.particles.size(); ++i)
+    for (unsigned int i=0; i<body_.particles.size(); ++i){
         body_.particles[i].force = vec2(0,0);
 
 
-    /** \todo (Part 1) Implement center force
-     */
-    if (external_force_ == Center)
-    {
-
-    }
-
-
-    /** \todo (Part 1) Implement damping force
-     \li The damping coefficient is given as member damping_
-     */
+       /** \todo (Part 1) Implement center force
+        */
+       if (external_force_ == Center)
+       {
+        Particle *p = &body_.particles.at(i);
+        p->force += C*(vec2(0,0)-p->position); 
+       }
 
 
+       /** \todo (Part 1) Implement damping force
+        \li The damping coefficient is given as member damping_
+        */
+        Particle *p = &body_.particles.at(i);
+        p->force -= damping_*p->velocity;
 
-    /** \todo (Part 1) Implement gravitation force
-     \li Particle mass available as particle_mass_
-     */
-    if (external_force_ == Gravitation)
-    {
-
-    }
-
-
-    /** \todo (Part 1) Implement force based boundary collisions
-     \li Collision coefficient given as collision_stiffness_
-     */
-    // collision forces
-    if (collisions_ == Force_based)
-    {
-        float planes[4][3] = {
-            {  0.0,  1.0, 1.0 },
-            {  0.0, -1.0, 1.0 },
-            {  1.0,  0.0, 1.0 },
-            { -1.0,  0.0, 1.0 }
-        };
+   
+       /** \todo (Part 1) Implement gravitation force
+        \li Particle mass available as particle_mass_
+        */
+       if (external_force_ == Gravitation)
+       {
+        Particle *p = &body_.particles.at(i);
+        p->force += vec2(0, -G);
+       }
 
 
-    }
+       /** \todo (Part 1) Implement force based boundary collisions
+        \li Collision coefficient given as collision_stiffness_
+        */
+       // collision forces
+       if (collisions_ == Force_based)
+       {
+           float planes[4][3] = {
+               {  0.0,  1.0, 1.0 },
+               {  0.0, -1.0, 1.0 },
+               {  1.0,  0.0, 1.0 },
+               { -1.0,  0.0, 1.0 }
+           };
+   
+   
+       }
+   }
 
 
     /** \todo (Part 1) Compute force of the interactive mouse spring
@@ -476,7 +487,11 @@ Mass_spring_viewer::compute_forces()
 
         vec2 pos0 = p0.position;
         vec2 pos1 = mouse_spring_.mouse_position;
-
+        
+        float stiffness = spring_stiffness_*distance(pos0,pos1);
+        float damping = spring_damping_*dot(p0.velocity,(pos0-pos1))/norm(pos0-pos1);
+        
+        p0.force += -(stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
     }
 
 
@@ -484,7 +499,17 @@ Mass_spring_viewer::compute_forces()
      \li Required information about springs in the scene are found in body_.springs
      \li Required coefficients are given as spring_stiffness_ and spring_damping_
      */
-
+    for (unsigned int i=0; i<body_.springs.size(); ++i){
+      Spring *s = &body_.springs.at(i);
+      Particle *p0 = s->particle0;
+      Particle *p1 = s->particle1;
+      
+      float stiffness = spring_stiffness_*(norm(p0->position-p1->position)-s->length());
+      float damping = spring_damping_*dot(p0->velocity-p1->velocity,(p0->position-p1->position))/norm(p0->position-p1->position);
+      
+      p0->force += (stiffness+damping)*(p0->position, p1->position)/norm(p0->position-p1->position);
+      p1->force -= (stiffness+damping)*(p0->position, p1->position)/norm(p0->position-p1->position);
+    }
 
 
     /** \todo (Part 2) Compute more forces in part 2 of the exercise: triangle-area forces, binding forces, etc.
