@@ -455,8 +455,8 @@ Mass_spring_viewer::compute_forces()
         */
        if (external_force_ == Gravitation)
        {
-        Particle *p = &body_.particles.at(i);
-        p->force += vec2(0, -G);
+           Particle *p = &body_.particles.at(i);
+           p->force += vec2(0, -G);
        }
 
 
@@ -466,14 +466,13 @@ Mass_spring_viewer::compute_forces()
        // collision forces
        if (collisions_ == Force_based)
        {
+           Particle *p = &body_.particles.at(i);
            float planes[4][3] = {
                {  0.0,  1.0, 1.0 },
                {  0.0, -1.0, 1.0 },
                {  1.0,  0.0, 1.0 },
                { -1.0,  0.0, 1.0 }
            };
-   
-   
        }
    }
 
@@ -491,7 +490,7 @@ Mass_spring_viewer::compute_forces()
         float stiffness = spring_stiffness_*distance(pos0,pos1);
         float damping = spring_damping_*dot(p0.velocity,(pos0-pos1))/norm(pos0-pos1);
         
-        p0.force += -(stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
+        p0.force -= (stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
     }
 
 
@@ -504,11 +503,11 @@ Mass_spring_viewer::compute_forces()
       Particle *p0 = s->particle0;
       Particle *p1 = s->particle1;
       
-      float stiffness = spring_stiffness_*(norm(p0->position-p1->position)-s->length());
-      float damping = spring_damping_*dot(p0->velocity-p1->velocity,(p0->position-p1->position))/norm(p0->position-p1->position);
+      float stiffness = spring_stiffness_*(norm(p0->position-p1->position)-s->rest_length);
+      float damping = spring_damping_*dot(p0->velocity-p1->velocity, (p0->position-p1->position))/norm(p0->position-p1->position);
       
-      p0->force += (stiffness+damping)*(p0->position, p1->position)/norm(p0->position-p1->position);
-      p1->force -= (stiffness+damping)*(p0->position, p1->position)/norm(p0->position-p1->position);
+      p0->force -= (stiffness+damping)*(p0->position - p1->position)/norm(p0->position-p1->position);
+      p1->force += (stiffness+damping)*(p0->position - p1->position)/norm(p0->position-p1->position);
     }
 
 
