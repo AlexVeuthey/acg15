@@ -18,6 +18,7 @@
 #include <sstream>
 
 
+
 //== IMPLEMENTATION ==========================================================
 
 
@@ -364,8 +365,20 @@ void Mass_spring_viewer::time_integration(float dt)
             /** \todo (Part 1) Implement Euler integration scheme
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
-
-
+            compute_forces();
+            
+            //update position
+            for (unsigned int i=0; i<body_.particles.size(); ++i){
+               Particle *p = &body_.particles.at(i);
+               p->position = p->position + dt*p->velocity;
+            }
+            
+            //update velocities
+            for (unsigned int i=0; i<body_.particles.size(); ++i){
+               Particle *p = &body_.particles.at(i);
+               p->velocity = p->velocity + dt*p->acceleration;
+            }
+            
             break;
         }
 
