@@ -367,15 +367,12 @@ void Mass_spring_viewer::time_integration(float dt)
              */
             compute_forces();
             
-            //update position
-            for (unsigned int i=0; i<body_.particles.size(); ++i){
-               Particle *p = &body_.particles.at(i);
-               p->position = p->position + dt*p->velocity;
-            }
             
-            //update velocities
             for (unsigned int i=0; i<body_.particles.size(); ++i){
                Particle *p = &body_.particles.at(i);
+               
+               //update position
+               p->position = p->position + dt*p->velocity;
                
                //calculate the new acceleration using newton's second law
                p->acceleration = p->force/p->mass;
@@ -496,7 +493,7 @@ Mass_spring_viewer::compute_forces()
         vec2 pos0 = p0.position;
         vec2 pos1 = mouse_spring_.mouse_position;
         
-        float stiffness = spring_stiffness_*distance(pos0,pos1);
+        float stiffness = spring_stiffness_*norm(pos0-pos1);
         float damping = spring_damping_*dot(p0.velocity,(pos0-pos1))/norm(pos0-pos1);
         
         p0.force -= (stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
