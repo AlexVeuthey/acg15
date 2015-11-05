@@ -453,7 +453,7 @@ Mass_spring_viewer::compute_forces()
        if (external_force_ == Gravitation)
        {
            Particle *p = &body_.particles.at(i);
-           p->force += vec2(0, -G);
+           p->force += vec2(0, -G)*p->mass;
        }
 
 
@@ -530,12 +530,21 @@ void Mass_spring_viewer::impulse_based_collisions()
     /** \todo (Part 2) Handle collisions based on impulses
      */
     // planes for which we compute collisions
-    float planes[4][3] = {
+      float planes[4][3] = {
         {  0.0,  1.0, 1.0 },
         {  0.0, -1.0, 1.0 },
         {  1.0,  0.0, 1.0 },
         { -1.0,  0.0, 1.0 }
-    };
+      };
+      /*Particle *p = &body_.particles.at(i);
+      vec2 &pos = p->position;
+      
+      for(int i = 0; i < 4; i++){
+         float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
+         if(relativ_pos < 0){
+            p->force += vec2(planes[i][0], planes[i][1])*(-relativ_pos)*collision_stiffness_;
+         }
+      }*/
 }
 
 
