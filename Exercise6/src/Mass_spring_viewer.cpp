@@ -459,8 +459,7 @@ Mass_spring_viewer::compute_forces()
         */
        /// Do damping only for explicit methods
        if (integration_ != Implicit)
-         for (std::vector<Particle>::iterator p_it = body_.particles.begin (); p_it != body_.particles.end (); ++p_it)
-           p_it->force -= damping_ * p_it->velocity;
+         body_.particles[i].force -= damping_ * body_.particles[i].velocity;
    
    
        /** \todo (Part 1) Implement gravitation force
