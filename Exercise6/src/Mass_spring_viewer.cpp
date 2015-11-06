@@ -18,7 +18,6 @@
 #include <sstream>
 
 
-
 //== IMPLEMENTATION ==========================================================
 
 
@@ -30,7 +29,7 @@ Mass_spring_viewer(const char* _title, int _width, int _height)
     collisions_          = Force_based;
     external_force_      = None;
     animate_             = false;
-    area_forces_         = true;
+    area_forces_         = false;
     show_forces_         = false;
 
     time_step_           = 0.001;
@@ -63,7 +62,7 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             break;
         }
 
-        // setup problem 5
+        // setup problem 2
         case '2':
         {
             body_.clear();
@@ -76,7 +75,7 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             break;
         }
 
-        // setup problem 4
+        // setup problem 3
         case '3':
         {
             body_.clear();
@@ -95,7 +94,7 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             break;
         }
 
-        // setup problem 2
+        // setup problem 4
         case '4':
         {
             body_.clear();
@@ -114,7 +113,7 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             break;
         }
 
-        // setup problem 3
+        // setup problem 5
         case '5':
         {
             body_.clear();
@@ -144,7 +143,8 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             {
                 case Euler:    integration_ = Midpoint; break;
                 case Midpoint: integration_ = Verlet;   break;
-                case Verlet:   integration_ = Euler;    break;
+                case Verlet:   integration_ = Implicit;    break;
+                case Implicit: integration_ = Euler; break;
             }
             glutPostRedisplay();
             break;
@@ -225,6 +225,7 @@ void Mass_spring_viewer::draw()
         case Euler:    oss << "Euler";    break;
         case Midpoint: oss << "Midpoint"; break;
         case Verlet:   oss << "Verlet";   break;
+        case Implicit: oss << "Implicit"; break;
     }
     glText(20, height_-40, oss.str());
 
@@ -363,6 +364,7 @@ void Mass_spring_viewer::time_integration(float dt)
         case Euler:
         {
             /** \todo (Part 1) Implement Euler integration scheme
+             \li The Particle class has variables position_t and velocity_t to store current values
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
             compute_forces();
@@ -403,14 +405,26 @@ void Mass_spring_viewer::time_integration(float dt)
 
             break;
         }
+
+        case Implicit:
+        {
+            /// The usual force computation method is called, and then the jacobian matrix dF/dx is calculated
+            compute_forces ();
+            compute_jacobians ();
+
+            /// Finally the linear system is composed and solved
+            solver_.solve (dt, particle_mass_, body_.particles);
+
+            break;
+        }
     }
 
 
     // impulse-based collision handling
-    if (collisions_ == Impulse_based)
-    {
-        impulse_based_collisions();
-    }
+//    if (collisions_ == Impulse_based)
+//    {
+//        impulse_based_collisions();
+//    }
 
 
     glutPostRedisplay();
@@ -435,28 +449,30 @@ Mass_spring_viewer::compute_forces()
         */
        if (external_force_ == Center)
        {
-        Particle *p = &body_.particles.at(i);
-        p->force += C*(vec2(0,0)-p->position); 
+         Particle *p = &body_.particles.at(i);
+         p->force += C*(vec2(0,0)-p->position); 
        }
-
-
+   
+   
        /** \todo (Part 1) Implement damping force
         \li The damping coefficient is given as member damping_
         */
-        Particle *p = &body_.particles.at(i);
-        p->force -= damping_*p->velocity;
-
+       /// Do damping only for explicit methods
+       if (integration_ != Implicit)
+         for (std::vector<Particle>::iterator p_it = body_.particles.begin (); p_it != body_.particles.end (); ++p_it)
+           p_it->force -= damping_ * p_it->velocity;
+   
    
        /** \todo (Part 1) Implement gravitation force
         \li Particle mass available as particle_mass_
         */
        if (external_force_ == Gravitation)
        {
-           Particle *p = &body_.particles.at(i);
-           p->force += vec2(0, -G)*p->mass;
+         Particle *p = &body_.particles.at(i);
+         p->force += vec2(0, -G)*p->mass;
        }
-
-
+   
+   
        /** \todo (Part 1) Implement force based boundary collisions
         \li Collision coefficient given as collision_stiffness_
         */
@@ -481,9 +497,8 @@ Mass_spring_viewer::compute_forces()
            }
        }
    }
-
-
-    /** \todo (Part 1) Compute force of the interactive mouse spring
+   
+    /** \todo (Part 1) Compute force of the interactive mass spring
      \li Required coefficients are given as spring_stiffness_ and spring_damping_
      */
     if (mouse_spring_.active)
@@ -497,6 +512,7 @@ Mass_spring_viewer::compute_forces()
         float damping = spring_damping_*dot(p0.velocity,(pos0-pos1))/norm(pos0-pos1);
         
         p0.force -= (stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
+
     }
 
 
@@ -516,9 +532,13 @@ Mass_spring_viewer::compute_forces()
       p1->force += (stiffness+damping)*(p0->position - p1->position)/norm(p0->position-p1->position);
     }
 
-
     /** \todo (Part 2) Compute more forces in part 2 of the exercise: triangle-area forces, binding forces, etc.
      */
+    if (area_forces_)
+    {
+    }
+    
+   
 }
 
 
@@ -529,15 +549,15 @@ void Mass_spring_viewer::impulse_based_collisions()
 {
     /** \todo (Part 2) Handle collisions based on impulses
      */
-    // planes for which we compute collisions
-      float planes[4][3] = {
-        {  0.0,  1.0, 1.0 },
-        {  0.0, -1.0, 1.0 },
-        {  1.0,  0.0, 1.0 },
-        { -1.0,  0.0, 1.0 }
-      };
-      
-      for (unsigned int i=0; i<body_.particles.size(); ++i){
+     
+     float planes[4][3] = {
+         {  0.0,  1.0, 1.0 },
+         {  0.0, -1.0, 1.0 },
+         {  1.0,  0.0, 1.0 },
+         { -1.0,  0.0, 1.0 }
+     };
+     
+     for (unsigned int i=0; i<body_.particles.size(); ++i){
       
       Particle *p = &body_.particles.at(i);
       vec2 &pos = p->position;
@@ -545,15 +565,90 @@ void Mass_spring_viewer::impulse_based_collisions()
          for(int i = 0; i < 4; i++){
             //use the line equation to find the pos of particle in relation to the line
             float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
-            std::cout << "pf\n";
             //if relativ_pos <= then the particle is in the wall
             if(relativ_pos <= 0){
                p->force = - 0*(dot(p->force, vec2(planes[i][0], planes[i][1])) * vec2(planes[i][0], planes[i][1]));
-               std::cout << "erd\n";
             }
          }
       }
 }
+//=============================================================================
 
+void Mass_spring_viewer::compute_jacobians ()
+{
+  /// Clear the solver matrices
+  solver_.clear ();
+
+  /** \todo (Part 2) Implement the corresponding jacobians for each of the force types.
+   * Use the code from compute_forces() as the starting ground.
+   */
+}
 
 //=============================================================================
+void ImplicitSolver::solve (float dt, float mass,
+                            std::vector<Particle> &particles)
+{
+  int num_particles = particles.size ();
+
+  /// Build the Jacobian matrix from the sparse set of elements
+  Eigen::SparseMatrix<float> J (2 * num_particles, 2 * num_particles);
+  J.setFromTriplets (triplets_.begin (), triplets_.end ());
+
+  /// Build up the position, velocity and force vectors
+  Eigen::VectorXf pos_vec (Eigen::VectorXf::Zero (2 * num_particles)),
+                  velocity_vec (Eigen::VectorXf::Zero (2 * num_particles)),
+                  force_vec (Eigen::VectorXf::Zero (2 * num_particles));
+  for (size_t p_i = 0; p_i < num_particles; ++p_i)
+  {
+    pos_vec (2 * p_i + 0) = particles[p_i].position[0];
+    pos_vec (2 * p_i + 1) = particles[p_i].position[1];
+    velocity_vec (2 * p_i + 0) = particles[p_i].velocity[0];
+    velocity_vec (2 * p_i + 1) = particles[p_i].velocity[1];
+    force_vec (2 * p_i + 0) = particles[p_i].force[0];
+    force_vec (2 * p_i + 1) = particles[p_i].force[1];
+  }
+
+  /// Kick out the fixed particles by creating a sparse selection matrix
+  std::vector<Eigen::Triplet<float> > triplets_selection;
+  int valid_particle_index = 0;
+  for (size_t p_i = 0; p_i < num_particles; ++p_i)
+    if (!particles[p_i].locked)
+    {
+      triplets_selection.push_back (Eigen::Triplet<float> (2 * p_i + 0, 2 * valid_particle_index + 0, 1.f));
+      triplets_selection.push_back (Eigen::Triplet<float> (2 * p_i + 1, 2 * valid_particle_index + 1, 1.f));
+      valid_particle_index ++;
+    }
+  Eigen::SparseMatrix<float> mat_selection (2 * num_particles, 2 * valid_particle_index);
+  mat_selection.setFromTriplets (triplets_selection.begin (), triplets_selection.end ());
+
+  /// Sparse identity matrix
+  Eigen::SparseMatrix<float> Id (2 * valid_particle_index, 2 * valid_particle_index);
+  Id.setIdentity ();
+
+  /// Apply the selection matrix on each vector and the Jacobian matrix
+  pos_vec = mat_selection.transpose () * pos_vec;
+  velocity_vec = mat_selection.transpose () * velocity_vec;
+  force_vec = mat_selection.transpose () * force_vec;
+  J = mat_selection.transpose () * J * mat_selection;
+
+  /// Build the right and left hand sides of the linear system
+  Eigen::SparseMatrix<float> A = Id - dt * dt / mass * J;
+  Eigen::VectorXf b;
+  b = dt * velocity_vec + dt * dt / mass * force_vec + (Id - dt * dt / mass * J) * pos_vec;
+
+  /// Solve the system and use the selection matrix again to arrange the new positions in a vector
+  linear_solver_.analyzePattern (A);
+  linear_solver_.compute (A);
+  Eigen::VectorXf new_pos = mat_selection * linear_solver_.solve (b);
+
+  /// Extract the positions from the solution vector and set the new positions and velocities inside the particle structures
+  for (size_t p_i = 0; p_i < num_particles; ++p_i)
+  {
+    if (!particles[p_i].locked)
+    {
+      vec2 pos_update (new_pos (2 * p_i + 0), new_pos (2 * p_i + 1));
+      particles[p_i].velocity = (pos_update - particles[p_i].position) / dt;
+      particles[p_i].position = pos_update;
+    }
+  }
+}
