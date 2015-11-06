@@ -421,10 +421,10 @@ void Mass_spring_viewer::time_integration(float dt)
 
 
     // impulse-based collision handling
-//    if (collisions_ == Impulse_based)
-//    {
-//        impulse_based_collisions();
-//    }
+    if (collisions_ == Impulse_based)
+    {
+        impulse_based_collisions();
+    }
 
 
     glutPostRedisplay();
@@ -537,8 +537,6 @@ Mass_spring_viewer::compute_forces()
     if (area_forces_)
     {
     }
-    
-   
 }
 
 
@@ -567,7 +565,7 @@ void Mass_spring_viewer::impulse_based_collisions()
             float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
             //if relativ_pos <= then the particle is in the wall
             if(relativ_pos <= 0){
-               p->force = - 0*(dot(p->force, vec2(planes[i][0], planes[i][1])) * vec2(planes[i][0], planes[i][1]));
+               p->velocity = p->velocity - 2*(dot(p->velocity, vec2(planes[i][0], planes[i][1])) * vec2(planes[i][0], planes[i][1]));
             }
          }
       }
