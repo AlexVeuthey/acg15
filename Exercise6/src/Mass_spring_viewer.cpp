@@ -40,7 +40,7 @@ Mass_spring_viewer(const char* _title, int _width, int _height)
     collision_stiffness_ = 1000.0;
     spring_stiffness_    = 1000.0;
     spring_damping_      = 1.0;
-    area_stiffness_      = 100000.0;
+    area_stiffness_      = 1000.0;
 
     mouse_spring_.active = false;
 }
@@ -583,6 +583,15 @@ Mass_spring_viewer::compute_forces()
      */
     if (area_forces_)
     {
+      for (unsigned int i=0; i<body_.triangles.size(); ++i){
+         Triangle &tri = body_.triangles.at(i);
+         
+         float EA = 0.5 * area_stiffness_ * pow(tri.area()-tri.rest_area, 2.0);
+         
+         tri.particle0->force -= EA*tri.particle0->velocity;
+         tri.particle1->force -= EA*tri.particle1->velocity;
+         tri.particle2->force -= EA*tri.particle2->velocity;
+      }
     }
 }
 
