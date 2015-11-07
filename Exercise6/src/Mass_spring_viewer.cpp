@@ -373,13 +373,16 @@ void Mass_spring_viewer::time_integration(float dt)
             for (unsigned int i=0; i<body_.particles.size(); ++i){
                Particle *p = &body_.particles.at(i);
                
-               //update position
-               p->position = p->position + dt*p->velocity;
+               if(!p->locked){
                
-               //calculate the new acceleration using newton's second law
-               p->acceleration = p->force/p->mass;
-               
-               p->velocity = p->velocity + dt*p->acceleration;
+                  //update position
+                  p->position = p->position + dt*p->velocity;
+                  
+                  //calculate the new acceleration using newton's second law
+                  vec2 accel = p->force/p->mass;
+                  
+                  p->velocity = p->velocity + dt*accel;
+               }
             }
             
             break;
@@ -391,7 +394,32 @@ void Mass_spring_viewer::time_integration(float dt)
              \li The Particle class has variables position_t and velocity_t to store current values
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
-
+            compute_forces();
+            
+            for (unsigned int i=0; i<body_.particles.size(); ++i){
+               Particle *p = &body_.particles.at(i);
+               
+               if(!p->locked){
+                  //keep v and x at t
+                  p->position_t = p->position;
+                  p->velocity_t = p->velocity_t;
+                  
+                  //calculate for half of t
+                  p->position = p->position + (dt/2) * p->velocity;
+                  vec2 accel = p->force/p->mass;
+                  p->velocity = p->velocity + (dt/2) * accel;
+                  
+                  //recalculate forces at midpoint
+                  compute_forces();
+                  
+                  //redo euler method from t with accel and vel of t+dt/2
+                  accel = p->force/p->mass;
+                  
+                  p->position = p->position_t + dt * p->velocity;
+                  p->velocity = p->velocity + dt * accel;
+               }
+            
+            }
             break;
         }
 
@@ -402,7 +430,27 @@ void Mass_spring_viewer::time_integration(float dt)
              \li The Particle class has a variable acceleration to remember the previous values
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
-
+            compute_forces();
+            
+            for (unsigned int i=0; i<body_.particles.size(); ++i){
+               Particle *p = &body_.particles.at(i);
+               
+               if(!p->locked){
+                  
+                  vec2 accel = p->force / p->mass;
+                  
+                  //calculate v(t), p->aceleration is a(t-dt)
+                  p->velocity = p->velocity + dt*(p->acceleration + accel)/2;
+                  
+                  //calculate x(t+dt)
+                  p->position = p->position + dt*p->velocity + dt*dt*accel/2;
+                  
+                  //keep a(t)
+                  p->acceleration = accel;
+               }
+            
+            }
+            
             break;
         }
 
