@@ -40,7 +40,7 @@ Mass_spring_viewer(const char* _title, int _width, int _height)
     collision_stiffness_ = 1000.0;
     spring_stiffness_    = 1000.0;
     spring_damping_      = 1.0;
-    area_stiffness_      = 1000.0;
+    area_stiffness_      = 100000.0;
 
     mouse_spring_.active = false;
 }
@@ -408,12 +408,19 @@ void Mass_spring_viewer::time_integration(float dt)
                   p->position = p->position + (dt/2) * p->velocity;
                   vec2 accel = p->force/p->mass;
                   p->velocity = p->velocity + (dt/2) * accel;
-                  
-                  //recalculate forces at midpoint
-                  compute_forces();
+               }
+            }
+            
+            //recalculate forces at midpoint
+            compute_forces();
+            
+            for (unsigned int i=0; i<body_.particles.size(); ++i){
+               Particle *p = &body_.particles.at(i);
+               
+               if(!p->locked){
                   
                   //redo euler method from t with accel and vel of t+dt/2
-                  accel = p->force/p->mass;
+                  vec2 accel = p->force/p->mass;
                   
                   p->position = p->position_t + dt * p->velocity;
                   p->velocity = p->velocity + dt * accel;
