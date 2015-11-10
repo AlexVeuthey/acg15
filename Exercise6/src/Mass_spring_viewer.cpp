@@ -398,11 +398,14 @@ void Mass_spring_viewer::time_integration(float dt)
             {
                 Particle *p = &body_.particles.at(i);
 
-                p->position_t = p->position + (dt/2)*p->velocity;
+                if (!p->locked)
+                {
+                    p->position_t = p->position + (dt/2)*p->velocity;
 
-                p->acceleration = p->force/p->mass;
+                    p->acceleration = p->force/p->mass;
 
-                p->velocity_t = p->velocity + (dt/2)*p->acceleration;
+                    p->velocity_t = p->velocity + (dt/2)*p->acceleration;
+                }
             }
 
             compute_forces();
@@ -412,11 +415,14 @@ void Mass_spring_viewer::time_integration(float dt)
             {
                 Particle *p = &body_.particles.at(i);
 
-                p->position = p->position + (dt)*p->velocity_t;
+                if (!p->locked)
+                {
+                    p->position = p->position + (dt)*p->velocity_t;
 
-                p->acceleration = p->force/p->mass;
+                    p->acceleration = p->force/p->mass;
 
-                p->velocity = p->velocity + (dt)*p->acceleration;
+                    p->velocity = p->velocity + (dt)*p->acceleration;
+                }
             }
 
             break;
@@ -429,6 +435,26 @@ void Mass_spring_viewer::time_integration(float dt)
              \li The Particle class has a variable acceleration to remember the previous values
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
+            compute_forces();
+
+            for (unsigned int i=0; i<body_.particles.size(); i++)
+            {
+                Particle *p = &body_.particles.at(i);
+
+                if (!p->locked)
+                {
+                    vec2 acceleration_t = p->force/p->mass;
+
+                    // update velocity
+                    p->velocity = p->velocity + dt*(acceleration_t + p->acceleration)/2;
+
+                    // update position
+                    p->position = p->position + dt*p->velocity + dt*dt*acceleration_t/2;
+
+                    // update acceleration for future computation
+                    p->acceleration = acceleration_t;
+                }
+            }
 
             break;
         }
