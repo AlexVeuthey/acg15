@@ -488,6 +488,9 @@ void Mass_spring_viewer::time_integration(float dt)
 
 //-----------------------------------------------------------------------------
 
+vec2 det(vec2 a0, vec2 a1){
+   return vec2(a0[0]*a1[1], a0[1]*a1[0]);
+}
 
 void
 Mass_spring_viewer::compute_forces()
@@ -590,14 +593,20 @@ Mass_spring_viewer::compute_forces()
      */
     if (area_forces_)
     {
+      //taken from http://cg.informatik.uni-freiburg.de/course_notes/sim_03_masspoint.pdf
       for (unsigned int i=0; i<body_.triangles.size(); ++i){
          Triangle &tri = body_.triangles.at(i);
          
+         vec2 e1 = tri.particle2->position - tri.particle0->position;
+         vec2 e2 = tri.particle2->position - tri.particle1->position;
+         
+         vec2 t = det(e1,e2);
+         
          float EA = 0.5 * area_stiffness_ * pow(tri.area()-tri.rest_area, 2.0);
          
-         tri.particle0->force -= EA*tri.particle0->velocity;
-         tri.particle1->force -= EA*tri.particle1->velocity;
-         tri.particle2->force -= EA*tri.particle2->velocity;
+         tri.particle0->force += det(EA*e2, t);
+         tri.particle1->force += det(EA*t, e1);
+         tri.particle2->force += det(EA*t, e2-e1);
       }
     }
 }
