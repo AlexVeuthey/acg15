@@ -412,11 +412,11 @@ void Mass_spring_viewer::time_integration(float dt)
             {
                 Particle *p = &body_.particles.at(i);
 
-                p->position = p->position_t + (dt)*p->velocity_t;
+                p->position = p->position + (dt)*p->velocity_t;
 
                 p->acceleration = p->force/p->mass;
 
-                p->velocity = p->velocity_t + (dt)*p->velocity_t;
+                p->velocity = p->velocity + (dt)*p->acceleration;
             }
 
             break;
