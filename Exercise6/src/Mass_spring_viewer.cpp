@@ -391,6 +391,33 @@ void Mass_spring_viewer::time_integration(float dt)
              \li The Particle class has variables position_t and velocity_t to store current values
              \li Hint: compute_forces() computes all forces for the current positions and velocities.
              */
+            compute_forces();
+
+            // first half
+            for (unsigned int i=0; i<body_.particles.size(); i++)
+            {
+                Particle *p = &body_.particles.at(i);
+
+                p->position_t = p->position + (dt/2)*p->velocity;
+
+                p->acceleration = p->force/p->mass;
+
+                p->velocity_t = p->velocity + (dt/2)*p->acceleration;
+            }
+
+            compute_forces();
+
+            // second half
+            for (unsigned int i=0; i<body_.particles.size(); i++)
+            {
+                Particle *p = &body_.particles.at(i);
+
+                p->position = p->position_t + (dt)*p->velocity_t;
+
+                p->acceleration = p->force/p->mass;
+
+                p->velocity = p->velocity_t + (dt)*p->velocity_t;
+            }
 
             break;
         }
