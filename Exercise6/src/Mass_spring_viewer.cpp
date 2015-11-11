@@ -45,6 +45,14 @@ Mass_spring_viewer(const char* _title, int _width, int _height)
     mouse_spring_.active = false;
 }
 
+//default abs is for int only, I don't know why
+float abs(float i){
+   return (i < 0) ? (-i) : (i);
+}
+
+float manhattan_distance(const vec2 &a0, const vec2 &a1){
+   return abs(a0[0]-a1[0])+abs(a0[1]-a1[1]);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -149,7 +157,21 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             glutPostRedisplay();
             break;
         }
+        
+        // setup problem 7
+        // same as 2 with 30 particles
+        case '7':
+        {
+            body_.clear();
+            for (int i=0; i<30; ++i)
+            {
+                body_.add_particle( vec2(0.9* cos(i/15.0f*M_PI), 0.9*sin(i/15.0f*M_PI)), vec2(-sin(i/15.0f*M_PI), cos(i/15.0f*M_PI)), particle_mass_, false );
+            }
 
+            glutPostRedisplay();
+            break;
+        }
+        
         // switch between time integration methods
         case 'i':
         {
@@ -465,6 +487,12 @@ void Mass_spring_viewer::time_integration(float dt)
                   //calculate v(t), p->aceleration is a(t-dt)
                   p->velocity = p->velocity + dt*(p->acceleration + accel)/2;
                   
+                  // need to call the collision detection again as the velocity has changed
+                  if (collisions_ == Impulse_based)
+                  {
+                     impulse_based_collisions();
+                  }
+                  
                   //calculate x(t+dt)
                   p->position = p->position + dt*p->velocity + dt*dt*accel/2;
                   
@@ -635,7 +663,7 @@ Mass_spring_viewer::compute_forces()
             if( i != j ){
                Particle *p0 = &body_.particles.at(i);
                Particle *p1 = &body_.particles.at(j);
-               if(distance(p0->position, p1->position) < 2.0f/(sqrt(body_.particles.size())-1.0f)){
+               if(distance(p0->position, p1->position) < 2.0f/(sqrt(body_.particles.size()))){
                   p0->force += 1.0f/distance(p0->position, p1->position) * (p0->position-p1->position) * 10.0f;
                }
             }
@@ -646,7 +674,6 @@ Mass_spring_viewer::compute_forces()
 
 
 //-----------------------------------------------------------------------------
-
 
 void Mass_spring_viewer::impulse_based_collisions()
 {
@@ -668,9 +695,11 @@ void Mass_spring_viewer::impulse_based_collisions()
          for(int i = 0; i < 4; i++){
             //use the line equation to find the pos of particle in relation to the line
             float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
+            vec2 plan_normal(planes[i][0], planes[i][1]);
+            
             //if relativ_pos <= then the particle is in the wall
-            if(relativ_pos <= 0){
-               p->velocity = p->velocity - 2*(dot(p->velocity, vec2(planes[i][0], planes[i][1])) * vec2(planes[i][0], planes[i][1]));
+            if(relativ_pos <= 0 && dot(plan_normal, p->velocity) < 0){
+               p->velocity = p->velocity - 2*(dot(p->velocity, plan_normal) * plan_normal);
             }
          }
       }
