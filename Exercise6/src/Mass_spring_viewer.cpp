@@ -157,7 +157,8 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             {
                 case None:        external_force_ = Center; break;
                 case Center:      external_force_ = Gravitation; break;
-                case Gravitation: external_force_ = None;      break;
+                case Gravitation: external_force_ = Equilibrium;      break;
+                case Equilibrium: external_force_ = None;
             }
             glutPostRedisplay();
             break;
@@ -256,6 +257,7 @@ void Mass_spring_viewer::draw()
         case None:        oss << "None";        break;
         case Center:      oss << "Center";      break;
         case Gravitation: oss << "Gravitation"; break;
+        case Equilibrium: oss << "Equilibrium"; break;
     }
     glText(20, height_-160, oss.str());
 
@@ -607,6 +609,23 @@ Mass_spring_viewer::compute_forces()
          tri.particle0->force += det(EA*e2, t);
          tri.particle1->force += det(EA*t, e1);
          tri.particle2->force += det(EA*t, e2-e1);
+      }
+    }
+    
+    //equilibrium Force
+    // we are using the enum value Gravitation to activate the equilibrium force
+    //as we don't hand in the .h file
+    if(external_force_ == Equilibrium){
+       for (unsigned int i = 0; i < body_.particles.size(); i++){
+         for (unsigned int j = 0; j < body_.particles.size(); j++){
+            if( i != j ){
+               Particle *p0 = &body_.particles.at(i);
+               Particle *p1 = &body_.particles.at(j);
+               if(distance(p0->position, p1->position) < 2.0f/(9.0f)){
+                  p0->force += 1.0f/distance(p0->position, p1->position) * (p0->position-p1->position) * 10.0f;
+               }
+            }
+         }
       }
     }
 }

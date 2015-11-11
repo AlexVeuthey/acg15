@@ -111,7 +111,7 @@ private: // parameter settings
     enum { Euler, Midpoint, Verlet, Implicit } integration_;
 
     /// paramters: external force type
-    enum { None, Center, Gravitation } external_force_;
+    enum { None, Center, Gravitation, Equilibrium } external_force_;
 
     /// parameter: how to handle collisiont
     enum { Force_based, Impulse_based } collisions_;
