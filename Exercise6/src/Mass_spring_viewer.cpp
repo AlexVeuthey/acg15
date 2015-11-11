@@ -135,6 +135,20 @@ void Mass_spring_viewer::keyboard(int key, int x, int y)
             glutPostRedisplay();
             break;
         }
+        
+        // setup problem 6
+        // same as 2 with 250 particles
+        case '6':
+        {
+            body_.clear();
+            for (int i=0; i<250; ++i)
+            {
+                body_.add_particle( vec2(0.9* cos(i/125.5*M_PI), 0.9*sin(i/125.5*M_PI)), vec2(-sin(i/125.5*M_PI), cos(i/125.5*M_PI)), particle_mass_, false );
+            }
+
+            glutPostRedisplay();
+            break;
+        }
 
         // switch between time integration methods
         case 'i':
@@ -621,7 +635,7 @@ Mass_spring_viewer::compute_forces()
             if( i != j ){
                Particle *p0 = &body_.particles.at(i);
                Particle *p1 = &body_.particles.at(j);
-               if(distance(p0->position, p1->position) < 2.0f/(9.0f)){
+               if(distance(p0->position, p1->position) < 2.0f/(sqrt(body_.particles.size())-1.0f)){
                   p0->force += 1.0f/distance(p0->position, p1->position) * (p0->position-p1->position) * 10.0f;
                }
             }
