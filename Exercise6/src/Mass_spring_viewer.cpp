@@ -46,12 +46,8 @@ Mass_spring_viewer(const char* _title, int _width, int _height)
 }
 
 //default abs is for int only, I don't know why
-float abs(float i){
+float abs(double i){
    return (i < 0) ? (-i) : (i);
-}
-
-float manhattan_distance(const vec2 &a0, const vec2 &a1){
-   return abs(a0[0]-a1[0])+abs(a0[1]-a1[1]);
 }
 
 //-----------------------------------------------------------------------------
@@ -533,8 +529,19 @@ void Mass_spring_viewer::time_integration(float dt)
 //-----------------------------------------------------------------------------
 
 vec2 det(vec2 a0, vec2 a1){
-   return vec2(a0[0]*a1[1], a0[1]*a1[0]);
+   //return vec2(a0[0]*a1[1], -a0[1]*a1[0]);
+   return  0.5 * vec2(a0[1] - a1[1], a1[0] - a0[0]);
 }
+
+vec2 gradient_term(const vec2 &p1, const vec2 &p2)
+    {
+        double x1 = p1[0];
+        double x2 = p2[0];
+        double y1 = p1[1];
+        double y2 = p2[1];
+
+        return  0.5 * vec2(y1 - y2, x2 - x1);
+    }
 
 void
 Mass_spring_viewer::compute_forces()
@@ -637,20 +644,14 @@ Mass_spring_viewer::compute_forces()
      */
     if (area_forces_)
     {
-      //taken from http://cg.informatik.uni-freiburg.de/course_notes/sim_03_masspoint.pdf
       for (unsigned int i=0; i<body_.triangles.size(); ++i){
          Triangle &tri = body_.triangles.at(i);
          
-         vec2 e1 = tri.particle2->position - tri.particle0->position;
-         vec2 e2 = tri.particle2->position - tri.particle1->position;
+         float EA = 0.5 * area_stiffness_ * (tri.area()-tri.rest_area);
          
-         vec2 t = det(e1,e2);
-         
-         float EA = 0.5 * area_stiffness_ * pow(tri.area()-tri.rest_area, 2.0);
-         
-         tri.particle0->force += det(EA*e2, t);
-         tri.particle1->force += det(EA*t, e1);
-         tri.particle2->force += det(EA*t, e2-e1);
+         tri.particle0->force -= EA*gradient_term(tri.particle1->position, tri.particle2->position);
+         tri.particle1->force -= EA*gradient_term(tri.particle2->position, tri.particle0->position);
+         tri.particle2->force -= EA*gradient_term(tri.particle0->position, tri.particle1->position);
       }
     }
     
@@ -664,7 +665,10 @@ Mass_spring_viewer::compute_forces()
                Particle *p0 = &body_.particles.at(i);
                Particle *p1 = &body_.particles.at(j);
                if(distance(p0->position, p1->position) < 2.0f/(sqrt(body_.particles.size()))){
-                  p0->force += 1.0f/distance(p0->position, p1->position) * (p0->position-p1->position) * 10.0f;
+                  //normalize the distance between particle from 0 to 1
+                  float norm_dist = distance(p0->position, p1->position)*2.0f/(sqrt(body_.particles.size()));
+                  
+                  p0->force += (1.0f/sqrt(norm_dist) - 1.0) * normalize(p0->position-p1->position);
                }
             }
          }
