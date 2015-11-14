@@ -528,27 +528,12 @@ void Mass_spring_viewer::time_integration(float dt)
 
 //-----------------------------------------------------------------------------
 
-vec2 det(vec2 a0, vec2 a1){
-   //return vec2(a0[0]*a1[1], -a0[1]*a1[0]);
-   return  0.5 * vec2(a0[1] - a1[1], a1[0] - a0[0]);
-}
-
-vec2 gradient_term(const vec2 &p1, const vec2 &p2)
-    {
-        double x1 = p1[0];
-        double x2 = p2[0];
-        double y1 = p1[1];
-        double y2 = p2[1];
-
-        return  0.5 * vec2(y1 - y2, x2 - x1);
-    }
+const int C = 20; //central force
+const double G = 9.81; //gravity force
 
 void
 Mass_spring_viewer::compute_forces()
-{
-    const int C = 20; //central force
-    const double G = 9.81; //gravity force
-    
+{    
     // clear forces
     for (unsigned int i=0; i<body_.particles.size(); ++i){
         body_.particles[i].force = vec2(0,0);
@@ -647,11 +632,20 @@ Mass_spring_viewer::compute_forces()
       for (unsigned int i=0; i<body_.triangles.size(); ++i){
          Triangle &tri = body_.triangles.at(i);
          
-         float EA = 0.5 * area_stiffness_ * (tri.area()-tri.rest_area);
+         vec2 &p0 = tri.particle0->position;
+         vec2 &p1 = tri.particle1->position;
+         vec2 &p2 = tri.particle2->position;
          
-         tri.particle0->force -= EA*gradient_term(tri.particle1->position, tri.particle2->position);
-         tri.particle1->force -= EA*gradient_term(tri.particle2->position, tri.particle0->position);
-         tri.particle2->force -= EA*gradient_term(tri.particle0->position, tri.particle1->position);
+         //this is derived EA
+         float dEA = area_stiffness_ * (tri.area()-tri.rest_area);
+         
+         vec2 dp0 = vec2(0.5*(p1[1]-p2[1]), 0.5*(p2[0]-p1[0]) );
+         vec2 dp1 = vec2(0.5*(p2[1]-p0[1]), 0.5*(p0[0]-p2[0]) );
+         vec2 dp2 = vec2(0.5*(p0[1]-p1[1]), 0.5*(p1[0]-p0[0]) );
+         
+         tri.particle0->force -= dEA*dp0;
+         tri.particle1->force -= dEA*dp1;
+         tri.particle2->force -= dEA*dp2;
       }
     }
     
@@ -718,6 +712,10 @@ void Mass_spring_viewer::compute_jacobians ()
   /** \todo (Part 2) Implement the corresponding jacobians for each of the force types.
    * Use the code from compute_forces() as the starting ground.
    */
+   
+   for(int i = 0; i < body_.particles.size(); i++){
+      
+   }
 }
 
 //=============================================================================
