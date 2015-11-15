@@ -660,9 +660,9 @@ Mass_spring_viewer::compute_forces()
                Particle *p1 = &body_.particles.at(j);
                if(distance(p0->position, p1->position) < 2.0f/(sqrt(body_.particles.size()))){
                   //normalize the distance between particle from 0 to 1
-                  float norm_dist = distance(p0->position, p1->position)*2.0f/(sqrt(body_.particles.size()));
+                  float norm_dist = distance(p0->position, p1->position)*(sqrt(body_.particles.size()))/2.0;
                   
-                  p0->force += (1.0f/sqrt(norm_dist) - 1.0) * normalize(p0->position-p1->position);
+                  p0->force += 10* (1.0f/norm_dist - 1.0) * normalize(p0->position-p1->position);
                }
             }
          }
@@ -714,7 +714,193 @@ void Mass_spring_viewer::compute_jacobians ()
    */
    
    for(int i = 0; i < body_.particles.size(); i++){
+      //center force
+      if (external_force_ == Center)
+       {
+         //dF_x/dx
+         solver_.addElementToJacobian(i, i, -20);
+         //dF_x/dy
+         solver_.addElementToJacobian(i, i+1, 0);
+         //dF_y/dx
+         solver_.addElementToJacobian(i+1, i, 0);
+         //dF_y/dy
+         solver_.addElementToJacobian(i+1, i+1, -20);
+       }
+       
+       if (external_force_ == Gravitation)
+       {
+         //nothing to do
+       }
+       
+       if (collisions_ == Force_based)
+       {
+           float planes[4][3] = {
+               {  0.0,  1.0, 1.0 },
+               {  0.0, -1.0, 1.0 },
+               {  1.0,  0.0, 1.0 },
+               { -1.0,  0.0, 1.0 }
+           };
+           
+           Particle *p = &body_.particles.at(i);
+           vec2 &pos = p->position;
+           
+           for(int n = 0; n < 4; n++){
+               float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
+               if(relativ_pos < 0){
+                  //dF_x/dx
+                  solver_.addElementToJacobian(i, i, -collision_stiffness_*planes[n][0]*planes[n][0]);
+                  //dF_x/dy
+                  solver_.addElementToJacobian(i, i+1, -collision_stiffness_*planes[n][0]*planes[n][1]);
+                  //dF_y/dx
+                  solver_.addElementToJacobian(i+1, i, -collision_stiffness_*planes[n][0]*planes[n][1]);
+                  //dF_y/dy
+                  solver_.addElementToJacobian(i+1, i+1, -collision_stiffness_*planes[n][1]*planes[n][1]);
+               }
+           }
+       }
+       
+      if (mouse_spring_.active)
+      {
+        /*Particle& p0 = body_.particles[ mouse_spring_.particle_index ];
+
+        vec2 pos0 = p0.position;
+        vec2 pos1 = mouse_spring_.mouse_position;
+        
+        float stiffness = spring_stiffness_*norm(pos0-pos1);
+        float damping = spring_damping_*dot(p0.velocity,(pos0-pos1))/norm(pos0-pos1);
+        
+        p0.force -= (stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);*/
+
+      }
       
+      /*for (unsigned int i=0; i<body_.springs.size(); ++i){
+         Spring *s = &body_.springs.at(i);
+         Particle *p0 = s->particle0;
+         Particle *p1 = s->particle1;
+         
+         float len = norm(p0->position-p1->position);
+         vec2 diffPos = p0->position-p1->position;
+         vec2 diffVel = p0->velocity-p1->velocity;
+         
+         float stiffness = spring_stiffness_*(len-s->rest_length);
+         float damping = spring_damping_*dot(diffVel, diffPos)/len;
+         
+         float dNormdx0 = diffPos[0]/len;
+         float dNormdx1 = -dNormdx0;
+         float dNormdy0 = diffPos[1]/len;
+         float dNormdy1 = -dNormdy0;
+         
+         float dStiffnessdx0 = spring_stiffness_*dNormdx0;
+         float dStiffnessdx1 = spring_stiffness_*dNormdx1;
+         float dStiffnessdy0 = spring_stiffness_*dNormdy0;
+         float dStiffnessdy1 = spring_stiffness_*dNormdy1;
+         
+         float dDampingdx0 = (spring_damping_*(diffPos[0]*(1/time_step_)+diffVel[0]))/len;
+         dDampingdx0 -= (spring_damping_*dNormdx0*(diffPos[0]*diffVel[0]+diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dDampingdx1 = (spring_damping_*(diffPos[0]*(1/time_step_)+diffVel[0]))/len;
+         dDampingdx1 -= (spring_damping_*dNormdx1*(diffPos[0]*diffVel[0]+diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dDampingdy0 = (spring_damping_*(diffPos[1]*(1/time_step_)+diffVel[1]))/len;
+         dDampingdy0 -= (spring_damping_*dNormdy0*(diffPos[0]*diffVel[0]+diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dDampingdy1 = (spring_damping_*(diffPos[1]*(1/time_step_)+diffVel[1]))/len;
+         dDampingdy1 -= (spring_damping_*dNormdy1*(diffPos[0]*diffVel[0]+diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dFdx0 = diffPos[0]*(dStiffnessdx0+dDampingdx0)/len - diffPos[0]*dNormdx0*(stiffness+damping)/(len*len) + (stiffness+damping)/len;
+         float dFdx1 = diffPos[0]*(dStiffnessdx1+dDampingdx1)/len - diffPos[0]*dNormdx1*(stiffness+damping)/(len*len) - (stiffness+damping)/len;
+         float dFdy0 = diffPos[1]*(dStiffnessdy0+dDampingdy0)/len - diffPos[1]*dNormdy0*(stiffness+damping)/(len*len) + (stiffness+damping)/len;
+         float dFdy1 = diffPos[1]*(dStiffnessdy1+dDampingdy1)/len - diffPos[1]*dNormdy1*(stiffness+damping)/(len*len) - (stiffness+damping)/len;
+         
+         solver_.addElementToJacobian(p0->id, p0->id, -dFdx0);
+         solver_.addElementToJacobian(p0->id, p0->id+1, -dFdy0);
+         solver_.addElementToJacobian(p0->id+1, p0->id, -dFdx1);
+         solver_.addElementToJacobian(p0->id+1, p0->id+1, -dFdy1);
+         
+         solver_.addElementToJacobian(p0->id, p1->id, -dFdx0);
+         solver_.addElementToJacobian(p0->id, p1->id+1, -dFdy0);
+         solver_.addElementToJacobian(p0->id+1, p1->id, -dFdx1);
+         solver_.addElementToJacobian(p0->id+1, p1->id+1, -dFdy1);
+         
+         solver_.addElementToJacobian(p1->id, p0->id, dFdx0);
+         solver_.addElementToJacobian(p1->id, p0->id+1, dFdy0);
+         solver_.addElementToJacobian(p1->id+1, p0->id, dFdx1);
+         solver_.addElementToJacobian(p1->id+1, p0->id+1, dFdy1);
+         
+         solver_.addElementToJacobian(p1->id, p1->id, dFdx0);
+         solver_.addElementToJacobian(p1->id, p1->id+1, dFdy0);
+         solver_.addElementToJacobian(p1->id+1, p1->id, dFdx1);
+         solver_.addElementToJacobian(p1->id+1, p1->id+1, dFdy1);
+      }*/
+      
+     /* for (unsigned int i=0; i<body_.springs.size(); ++i){
+         Spring *s = &body_.springs.at(i);
+         Particle *p0 = s->particle0;
+         Particle *p1 = s->particle1;
+         
+         float len = norm(p0->position-p1->position);
+         vec2 diffPos = p0->position-p1->position;
+         vec2 diffVel = p0->velocity-p1->velocity;
+         
+         float stiffness = spring_stiffness_*(len-s->rest_length);
+         float damping = spring_damping_*dot(diffVel, diffPos)/len;
+         
+//         float dFdx0 = -(stiffness+damping)*(diffPos[0]*dNormdx0+len)/(len*len);
+//         float dFdx1 = -(stiffness+damping)*(-diffPos[0]*dNormdx1-len)/(len*len);
+//         float dFdy0 = -(stiffness+damping)*(diffPos[1]*dNormdy0+len)/(len*len);
+//         float dFdy1 = -(stiffness+damping)*(-diffPos[1]*dNormdy1-len)/(len*len);
+         float dFxdx = -(stiffness+damping)*(-diffPos[1]*-diffPos[1])/(len*len*len);
+         float dFxdy = (stiffness+damping)*(diffPos[0]*diffPos[1])/(len*len*len);
+         float dFydx = (stiffness+damping)*(diffPos[0]*diffPos[1])/(len*len*len);
+         float dFydy = -(stiffness+damping)*(-diffPos[0]*-diffPos[0])/(len*len*len);
+         
+         
+         solver_.addElementToJacobian(p0->id, p0->id, dFxdx);
+         solver_.addElementToJacobian(p0->id, p0->id+1, dFxdy);
+         solver_.addElementToJacobian(p0->id+1, p0->id, dFydx);
+         solver_.addElementToJacobian(p0->id+1, p0->id+1, dFydy);
+         
+         solver_.addElementToJacobian(p1->id, p1->id, -dFxdx);
+         solver_.addElementToJacobian(p1->id, p1->id+1, -dFxdy);
+         solver_.addElementToJacobian(p1->id+1, p1->id, -dFydx);
+         solver_.addElementToJacobian(p1->id+1, p1->id+1, -dFydy);
+      }*/
+      
+      if (area_forces_)
+       {
+         for (unsigned int i=0; i<body_.triangles.size(); ++i){
+            Triangle &tri = body_.triangles.at(i);
+            
+            vec2 &p0 = tri.particle0->position;
+            vec2 &p1 = tri.particle1->position;
+            vec2 &p2 = tri.particle2->position;
+            
+            //this is derived EA
+            float dEA = area_stiffness_ * (tri.area()-tri.rest_area);
+            
+            vec2 dp0 = vec2(0.5*(p1[1]-p2[1]), 0.5*(p2[0]-p1[0]) );
+            vec2 dp1 = vec2(0.5*(p2[1]-p0[1]), 0.5*(p0[0]-p2[0]) );
+            vec2 dp2 = vec2(0.5*(p0[1]-p1[1]), 0.5*(p1[0]-p0[0]) );
+            
+            solver_.addElementToJacobian(tri.particle0->id, tri.particle1->id+1,  dEA*0.5);
+            solver_.addElementToJacobian(tri.particle0->id, tri.particle2->id+1, -dEA*0.5);
+            
+            /*solver_.addElementToJacobian(tri.particle0->id+1, tri.particle1->id, -dEA*0.5);
+            solver_.addElementToJacobian(tri.particle0->id+1, tri.particle2->id, dEA*0.5);
+            
+            solver_.addElementToJacobian(tri.particle1->id, tri.particle0->id+1, -dEA*0.5);
+            solver_.addElementToJacobian(tri.particle1->id, tri.particle2->id+1, dEA*0.5);
+            
+            solver_.addElementToJacobian(tri.particle1->id+1, tri.particle0->id, dEA*0.5);
+            solver_.addElementToJacobian(tri.particle1->id+1, tri.particle2->id, -dEA*0.5);
+            
+            solver_.addElementToJacobian(tri.particle2->id, tri.particle0->id+1, dEA*0.5);
+            solver_.addElementToJacobian(tri.particle2->id, tri.particle1->id+1, -dEA*0.5);
+            
+            solver_.addElementToJacobian(tri.particle2->id+1, tri.particle1->id, dEA*0.5);
+            solver_.addElementToJacobian(tri.particle2->id+1, tri.particle0->id, -dEA*0.5);*/
+         }
+       }
    }
 }
 
