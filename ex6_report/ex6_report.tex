@@ -122,4 +122,11 @@ Here we tested the equilibrium force on 30, 100, 250 particles, with verlet inte
 \includegraphics[scale=0.25]{100.png}\\
 \includegraphics[scale=0.25]{250.png}
 
+\section*{Comparison of the integration methods}
+The verlet integration is the most stable of the integrations methods in this lab.\\
+The euler integration method is really unstable and particles will rarely find a rest point (they will bounce around or jiggle when there are springs). The system can go unstable very easily with springs. A lower timestep will solve this problem at the cost of computation time.\\
+The midpoint integration method have the same problems as euler but the instabilites are reduced for the same time stamp.\\
+In the case of euler and midpoint integration, all inacurracies and the unstability of the system can be solved by reducing the timestamp.\\
+The verlet integration is the most stable. For the same timestamp as used for euler and midpoint, particles will find a rest point at some point and the scene with the octogon will stay stable, even if violent forces are acting on the shape. The verlet integration can be even used with larger timestamps, the system will stay stable at dt=0.002 and will show some problems at dt=0.004.\\
+In the case of implicit euler, the same problems as explicit euler appear. That is, the system go unstable when the timestamp is too high. A lower time stamp (t=0.00025) solve the problem.
 \end{document}
