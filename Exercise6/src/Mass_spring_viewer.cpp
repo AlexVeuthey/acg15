@@ -745,7 +745,7 @@ void Mass_spring_viewer::compute_jacobians ()
            vec2 &pos = p->position;
            
            for(int n = 0; n < 4; n++){
-               float relativ_pos = pos[0]*planes[i][0]+pos[1]*planes[i][1]+planes[i][2] - particle_radius_;
+               float relativ_pos = pos[0]*planes[n][0]+pos[1]*planes[n][1]+planes[n][2] - particle_radius_;
                if(relativ_pos < 0){
                   //dF_x/dx
                   solver_.addElementToJacobian(i, i, -collision_stiffness_*planes[n][0]*planes[n][0]);
@@ -759,6 +759,8 @@ void Mass_spring_viewer::compute_jacobians ()
            }
        }
        
+   }
+       
       if (mouse_spring_.active)
       {
       
@@ -771,19 +773,41 @@ void Mass_spring_viewer::compute_jacobians ()
          vec2 diffPos = pos0-pos1;
          vec2 diffVel = p0.velocity;
          
+         float stiffness = spring_stiffness_*(len);
+         float damping = spring_damping_*dot(diffVel, diffPos)/len;
+         
          float dNormdx0 = diffPos[0]/len;
          float dNormdx1 = -dNormdx0;
          float dNormdy0 = diffPos[1]/len;
          float dNormdy1 = -dNormdy0;
          
-         float stiffness = spring_stiffness_*(len);
-         float damping = spring_damping_*dot(diffVel, diffPos)/len;
+         float dStiffnessdx0 = spring_stiffness_*dNormdx0;
+         float dStiffnessdx1 = spring_stiffness_*dNormdx1;
+         float dStiffnessdy0 = spring_stiffness_*dNormdy0;
+         float dStiffnessdy1 = spring_stiffness_*dNormdy1;
          
-         float dF0xdx0 = -(stiffness+damping)*(-diffPos[0]*dNormdx0+len)/(len*len);
-         float dF0xdy0 = (stiffness+damping)*(diffPos[0]*dNormdy0)/(len*len);
-         float dF0ydx0 = (stiffness+damping)*(diffPos[1]*dNormdx0)/(len*len);
-         float dF0ydy0 = -(stiffness+damping)*(-diffPos[1]*dNormdy0+len)/(len*len);
+         float dDampingdx0 = (spring_damping_*(diffPos[0]*(1/time_step_)+diffVel[0]))/len;
+         dDampingdx0 -= (spring_damping_*dNormdx0*(diffPos[0]*diffVel[0]-diffPos[1]*diffVel[1] ))/(len*len);
          
+         float dDampingdx1 = (spring_damping_*(diffPos[0]*(1/time_step_)+diffVel[0]))/len;
+         dDampingdx1 -= (spring_damping_*dNormdx1*(diffPos[0]*diffVel[0]-diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dDampingdy0 = (spring_damping_*(-diffPos[1]*(1/time_step_)-diffVel[1]))/len;
+         dDampingdy0 -= (spring_damping_*dNormdy0*(diffPos[0]*diffVel[0]-diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dDampingdy1 = (spring_damping_*(diffVel[1]-diffPos[1]*(1/time_step_)))/len;
+         dDampingdy1 -= (spring_damping_*dNormdy1*(diffPos[0]*diffVel[0]-diffPos[1]*diffVel[1] ))/(len*len);
+         
+         float dF0xdx0 = -(diffPos[0]*(dStiffnessdx0+dDampingdx0))/len;
+         dF0xdx0 += (diffPos[0]*dNormdx0*(stiffness+damping))/(len*len);
+         dF0xdx0 -= (stiffness+damping)/len;
+         float dF0xdy0 = (1/(len*len))*(-diffPos[0])*(len*(dStiffnessdy0+dDampingdy0));
+         dF0xdy0 -= dNormdy0*(stiffness-damping);
+         float dF0ydx0 = (1/(len*len))*(-diffPos[1])*(len*(dStiffnessdx0+dDampingdx0));
+         dF0xdy0 -= dNormdx0*(stiffness-damping);
+         float dF0ydy0 = -(diffPos[1]*(dStiffnessdy0+dDampingdy0))/len;
+         dF0ydy0 += (diffPos[1]*dNormdy0*(stiffness+damping))/(len*len);
+         dF0ydy0 -= (stiffness+damping)/len;
          
          solver_.addElementToJacobian(p0.id, p0.id, dF0xdx0);
          solver_.addElementToJacobian(p0.id, p0.id+1, dF0xdy0);
@@ -791,7 +815,7 @@ void Mass_spring_viewer::compute_jacobians ()
          solver_.addElementToJacobian(p0.id+1, p0.id+1, dF0ydy0);
       }
       
-      /*for (unsigned int i=0; i<body_.springs.size(); ++i){
+      for (unsigned int i=0; i<body_.springs.size(); ++i){
          Spring *s = &body_.springs.at(i);
          Particle *p0 = s->particle0;
          Particle *p1 = s->particle1;
@@ -836,6 +860,28 @@ void Mass_spring_viewer::compute_jacobians ()
          dF0ydy0 += (diffPos[1]*dNormdy0*(stiffness+damping))/(len*len);
          dF0ydy0 -= (stiffness+damping)/len;
          
+         float dF0xdx1 = -(diffPos[0]*(dStiffnessdx1+dDampingdx1))/len;
+         dF0xdx1 += (diffPos[0]*dNormdx1*(stiffness+damping))/(len*len);
+         dF0xdx1 -= (stiffness+damping)/len;
+         float dF0xdy1 = (1/(len*len))*(-diffPos[0])*(len*(dStiffnessdy1+dDampingdy1));
+         dF0xdy1 -= dNormdy1*(stiffness-damping);
+         float dF0ydx1 = (1/(len*len))*(-diffPos[1])*(len*(dStiffnessdx1+dDampingdx1));
+         dF0xdy1 -= dNormdx1*(stiffness-damping);
+         float dF0ydy1 = -(diffPos[1]*(dStiffnessdy1+dDampingdy1))/len;
+         dF0ydy1 += (diffPos[1]*dNormdy1*(stiffness+damping))/(len*len);
+         dF0ydy1 -= (stiffness+damping)/len;
+         
+         float dF1xdx0 = (diffPos[0]*(dStiffnessdx0+dDampingdx0))/len;
+         dF1xdx0 -= (diffPos[0]*dNormdx0*(stiffness+damping))/(len*len);
+         dF1xdx0 += (stiffness+damping)/len;
+         float dF1xdy0 = -(1/(len*len))*(-diffPos[0])*(len*(dStiffnessdy0+dDampingdy0));
+         dF1xdy0 += dNormdy0*(stiffness-damping);
+         float dF1ydx0 = -(1/(len*len))*(-diffPos[1])*(len*(dStiffnessdx0+dDampingdx0));
+         dF1xdy0 += dNormdx0*(stiffness-damping);
+         float dF1ydy0 = (diffPos[1]*(dStiffnessdy0+dDampingdy0))/len;
+         dF1ydy0 -= (diffPos[1]*dNormdy0*(stiffness+damping))/(len*len);
+         dF1ydy0 += (stiffness+damping)/len;
+         
          float dF1xdx1 = (diffPos[0]*(dStiffnessdx1+dDampingdx1))/len;
          dF1xdx1 -= (diffPos[0]*dNormdx1*(stiffness+damping))/(len*len);
          dF1xdx1 += (stiffness+damping)/len;
@@ -846,65 +892,6 @@ void Mass_spring_viewer::compute_jacobians ()
          float dF1ydy1 = (diffPos[1]*(dStiffnessdy1+dDampingdy1))/len;
          dF1ydy1 -= (diffPos[1]*dNormdy1*(stiffness+damping))/(len*len);
          dF1ydy1 += (stiffness+damping)/len;
-         
-         solver_.addElementToJacobian(p0->id, p0->id, dF0xdx0);
-         solver_.addElementToJacobian(p0->id, p0->id+1, dF0xdy0);
-         solver_.addElementToJacobian(p0->id+1, p0->id, dF0ydx0);
-         solver_.addElementToJacobian(p0->id+1, p0->id+1, dF0ydy0);
-         
-//         solver_.addElementToJacobian(p0->id, p1->id, -dFdx0);
-//         solver_.addElementToJacobian(p0->id, p1->id+1, -dFdy0);
-//         solver_.addElementToJacobian(p0->id+1, p1->id, -dFdx1);
-//         solver_.addElementToJacobian(p0->id+1, p1->id+1, -dFdy1);
-         
-//         solver_.addElementToJacobian(p1->id, p0->id, dFdx0);
-//         solver_.addElementToJacobian(p1->id, p0->id+1, dFdy0);
-//         solver_.addElementToJacobian(p1->id+1, p0->id, dFdx1);
-//         solver_.addElementToJacobian(p1->id+1, p0->id+1, dFdy1);
-         
-//         solver_.addElementToJacobian(p1->id, p1->id, dF1xdx1);
-//         solver_.addElementToJacobian(p1->id, p1->id+1, dF1xdy1);
-//         solver_.addElementToJacobian(p1->id+1, p1->id, dF1ydx1);
-//         solver_.addElementToJacobian(p1->id+1, p1->id+1, dF1ydy1);
-      }*/
-      
-      for (unsigned int i=0; i<body_.springs.size(); ++i){
-         Spring *s = &body_.springs.at(i);
-         Particle *p0 = s->particle0;
-         Particle *p1 = s->particle1;
-         
-         float len = norm(p0->position-p1->position);
-         vec2 diffPos = p0->position-p1->position;
-         vec2 diffVel = p0->velocity-p1->velocity;
-         
-         float dNormdx0 = diffPos[0]/len;
-         float dNormdx1 = -dNormdx0;
-         float dNormdy0 = diffPos[1]/len;
-         float dNormdy1 = -dNormdy0;
-         
-         float stiffness = spring_stiffness_*(len-s->rest_length);
-         float damping = spring_damping_*dot(diffVel, diffPos)/len;
-         
-         float dF0xdx0 = -(stiffness+damping)*(-diffPos[0]*dNormdx0+len)/(len*len);
-         float dF0xdy0 = (stiffness+damping)*(diffPos[0]*dNormdy0)/(len*len);
-         float dF0ydx0 = (stiffness+damping)*(diffPos[1]*dNormdx0)/(len*len);
-         float dF0ydy0 = -(stiffness+damping)*(-diffPos[1]*dNormdy0+len)/(len*len);
-         
-         float dF0xdx1 = (stiffness+damping)*(diffPos[0]*dNormdx1+len)/(len*len);
-         float dF0xdy1 = (stiffness+damping)*(diffPos[0]*dNormdy1)/(len*len);
-         float dF0ydx1 = (stiffness+damping)*(diffPos[1]*dNormdx1)/(len*len);
-         float dF0ydy1 = (stiffness+damping)*(diffPos[1]*dNormdy1+len)/(len*len);
-         
-         float dF1xdx0 = (stiffness+damping)*(-diffPos[0]*dNormdx0+len)/(len*len);
-         float dF1xdy0 = (stiffness+damping)*(-diffPos[0]*dNormdy0)/(len*len);
-         float dF1ydx0 = (stiffness+damping)*(-diffPos[1]*dNormdx0)/(len*len);
-         float dF1ydy0 = (stiffness+damping)*(-diffPos[1]*dNormdy0+len)/(len*len);
-         
-         float dF1xdx1 = -(stiffness+damping)*(diffPos[0]*dNormdx1+len)/(len*len);
-         float dF1xdy1 = (stiffness+damping)*(-diffPos[0]*dNormdy1)/(len*len);
-         float dF1ydx1 = (stiffness+damping)*(-diffPos[1]*dNormdx1)/(len*len);
-         float dF1ydy1 = -(stiffness+damping)*(diffPos[1]*dNormdy1+len)/(len*len);;
-         
          
          solver_.addElementToJacobian(p0->id, p0->id, dF0xdx0);
          solver_.addElementToJacobian(p0->id, p0->id+1, dF0xdy0);
@@ -926,6 +913,7 @@ void Mass_spring_viewer::compute_jacobians ()
          solver_.addElementToJacobian(p1->id+1, p1->id, dF1ydx1);
          solver_.addElementToJacobian(p1->id+1, p1->id+1, dF1ydy1);
       }
+      
       
       if (area_forces_)
        {
@@ -954,76 +942,53 @@ void Mass_spring_viewer::compute_jacobians ()
             float dAreaDy1 = 0.5*area_stiffness_*(p0[0]-p2[0]);
             float dAreaDy2 = -0.5*area_stiffness_*(p0[0]-p1[0]);
             
-            solver_.addElementToJacobian(id0, id1+1, 0.5*dEA);
-            solver_.addElementToJacobian(id0, id2+1, -0.5*dEA);
-            
-            solver_.addElementToJacobian(id0+1, id1, -0.5*dEA);
-            solver_.addElementToJacobian(id0+1, id2, 0.5*dEA);
-            
-            solver_.addElementToJacobian(id1, id2+1, 0.5*dEA);
-            solver_.addElementToJacobian(id1, id0+1, -0.5*dEA);
-            
-            solver_.addElementToJacobian(id1+1, id0, 0.5*dEA);
-            solver_.addElementToJacobian(id1+1, id2, -0.5*dEA);
-            
-            solver_.addElementToJacobian(id2, id0+1, 0.5*dEA);
-            solver_.addElementToJacobian(id2, id1+1, -0.5*dEA);
-            
-            solver_.addElementToJacobian(id2+1, id1, 0.5*dEA);
-            solver_.addElementToJacobian(id2+1, id0, -0.5*dEA);
-            
-//            solver_.addElementToJacobian(id0, id0, dp0[0]*dAreaDx0);
-//            solver_.addElementToJacobian(id0, id0+1, dp0[0]*dAreaDy0);
-//            solver_.addElementToJacobian(id0, id1, dp0[0]*dAreaDx1);
-//            solver_.addElementToJacobian(id0, id1+1, dp0[0]*dAreaDy1+0.5*tri.area());
-//            solver_.addElementToJacobian(id0, id2, dp0[0]*dAreaDx2);
-//            solver_.addElementToJacobian(id0, id2+1, -0.5*(p2[1]-p1[1])*dAreaDy2-0.5*tri.area());
+            solver_.addElementToJacobian(id0, id0, dp0[0]*dAreaDx0);
+            solver_.addElementToJacobian(id0, id0+1, dp0[0]*dAreaDy0);
+            solver_.addElementToJacobian(id0, id1, dp0[0]*dAreaDx1);
+            solver_.addElementToJacobian(id0, id1+1, dp0[0]*dAreaDy1+0.5*tri.area());
+            solver_.addElementToJacobian(id0, id2, dp0[0]*dAreaDx2);
+            solver_.addElementToJacobian(id0, id2+1, -0.5*(p2[1]-p1[1])*dAreaDy2-0.5*tri.area());
             
             
-//            solver_.addElementToJacobian(id0+1, id0, dp0[1]*dAreaDx0);
-//            solver_.addElementToJacobian(id0+1, id0+1, dp0[1]*dAreaDy0);
-//            solver_.addElementToJacobian(id0+1, id1, -0.5*(p1[0]-p2[0])*dAreaDx1-0.5*tri.area());
-//            solver_.addElementToJacobian(id0+1, id1+1, dp0[1]*dAreaDy1);
-//            solver_.addElementToJacobian(id0+1, id2, dp0[1]*dAreaDx2+0.5*tri.area());
-//            solver_.addElementToJacobian(id0+1, id2+1, dp0[1]*dAreaDy2);
+            solver_.addElementToJacobian(id0+1, id0, dp0[1]*dAreaDx0);
+            solver_.addElementToJacobian(id0+1, id0+1, dp0[1]*dAreaDy0);
+            solver_.addElementToJacobian(id0+1, id1, -0.5*(p1[0]-p2[0])*dAreaDx1-0.5*tri.area());
+            solver_.addElementToJacobian(id0+1, id1+1, dp0[1]*dAreaDy1);
+            solver_.addElementToJacobian(id0+1, id2, dp0[1]*dAreaDx2+0.5*tri.area());
+            solver_.addElementToJacobian(id0+1, id2+1, dp0[1]*dAreaDy2);
             
             
-//            solver_.addElementToJacobian(id1, id0, dp1[0]*dAreaDx0);
-//            solver_.addElementToJacobian(id1, id0+1, -0.5*(p0[1]-p2[1])*dAreaDy0-0.5*tri.area());
-//            solver_.addElementToJacobian(id1, id1, dp1[0]*dAreaDx1);
-//            solver_.addElementToJacobian(id1, id1+1, dp1[0]*dAreaDy1);
-//            solver_.addElementToJacobian(id1, id2, dp1[0]*dAreaDx2);
-//            solver_.addElementToJacobian(id1, id2+1, dp1[0]*dAreaDy2+0.5*tri.area());
+            solver_.addElementToJacobian(id1, id0, dp1[0]*dAreaDx0);
+            solver_.addElementToJacobian(id1, id0+1, -0.5*(p0[1]-p2[1])*dAreaDy0-0.5*tri.area());
+            solver_.addElementToJacobian(id1, id1, dp1[0]*dAreaDx1);
+            solver_.addElementToJacobian(id1, id1+1, dp1[0]*dAreaDy1);
+            solver_.addElementToJacobian(id1, id2, dp1[0]*dAreaDx2);
+            solver_.addElementToJacobian(id1, id2+1, dp1[0]*dAreaDy2+0.5*tri.area());
             
             
-//            solver_.addElementToJacobian(id1+1, id0, dp1[1]*dAreaDx0+0.5*tri.area());
-//            solver_.addElementToJacobian(id1+1, id0+1, dp1[1]*dAreaDy0);
-//            solver_.addElementToJacobian(id1+1, id1, dp1[1]*dAreaDx1);
-//            solver_.addElementToJacobian(id1+1, id1+1, dp1[1]*dAreaDy1);
-//            solver_.addElementToJacobian(id1+1, id2, -0.5*(p2[0]-p0[0])*dAreaDx2-0.5*tri.area());
-//            solver_.addElementToJacobian(id1+1, id2+1, dp1[1]*dAreaDy2);
+            solver_.addElementToJacobian(id1+1, id0, dp1[1]*dAreaDx0+0.5*tri.area());
+            solver_.addElementToJacobian(id1+1, id0+1, dp1[1]*dAreaDy0);
+            solver_.addElementToJacobian(id1+1, id1, dp1[1]*dAreaDx1);
+            solver_.addElementToJacobian(id1+1, id1+1, dp1[1]*dAreaDy1);
+            solver_.addElementToJacobian(id1+1, id2, -0.5*(p2[0]-p0[0])*dAreaDx2-0.5*tri.area());
+            solver_.addElementToJacobian(id1+1, id2+1, dp1[1]*dAreaDy2);
             
-//            solver_.addElementToJacobian(id2, id0, dp2[0]*dAreaDx0);
-//            solver_.addElementToJacobian(id2, id0+1, dp2[0]*dAreaDy0+0.5*tri.area());
-//            solver_.addElementToJacobian(id2, id1, dp2[0]*dAreaDx1);
-//            solver_.addElementToJacobian(id2, id1+1, -0.5*(p1[1]-p0[1])*dAreaDy1-0.5*tri.area());
-//            solver_.addElementToJacobian(id2, id2, dp2[0]*dAreaDx2);
-//            solver_.addElementToJacobian(id2, id2+1, dp2[0]*dAreaDy2);
+            solver_.addElementToJacobian(id2, id0, dp2[0]*dAreaDx0);
+            solver_.addElementToJacobian(id2, id0+1, dp2[0]*dAreaDy0+0.5*tri.area());
+            solver_.addElementToJacobian(id2, id1, dp2[0]*dAreaDx1);
+            solver_.addElementToJacobian(id2, id1+1, -0.5*(p1[1]-p0[1])*dAreaDy1-0.5*tri.area());
+            solver_.addElementToJacobian(id2, id2, dp2[0]*dAreaDx2);
+            solver_.addElementToJacobian(id2, id2+1, dp2[0]*dAreaDy2);
             
-//            solver_.addElementToJacobian(id2+1, id0, -0.5*(p0[0]-p1[0])*dAreaDx0-0.5*tri.area());
-//            solver_.addElementToJacobian(id2+1, id0+1, dp2[1]*dAreaDy0);
-//            solver_.addElementToJacobian(id2+1, id1, dp2[1]*dAreaDx1+0.5*tri.area());
-//            solver_.addElementToJacobian(id2+1, id1+1, dp2[1]*dAreaDy1);
-//            solver_.addElementToJacobian(id2+1, id2, dp2[1]*dAreaDx2);
-//            solver_.addElementToJacobian(id2+1, id2+1, dp2[1]*dAreaDy2);
-            
-            //solver_.addElementToJacobian(id0, id1, dp0[0]*dAreaDx1);
-            //solver_.addElementToJacobian(tri.particle0->id, tri.particle1->id+1,  dEA*0.5);
-            //solver_.addElementToJacobian(tri.particle0->id, tri.particle2->id+1, -dEA*0.5);
+            solver_.addElementToJacobian(id2+1, id0, -0.5*(p0[0]-p1[0])*dAreaDx0-0.5*tri.area());
+            solver_.addElementToJacobian(id2+1, id0+1, dp2[1]*dAreaDy0);
+            solver_.addElementToJacobian(id2+1, id1, dp2[1]*dAreaDx1+0.5*tri.area());
+            solver_.addElementToJacobian(id2+1, id1+1, dp2[1]*dAreaDy1);
+            solver_.addElementToJacobian(id2+1, id2, dp2[1]*dAreaDx2);
+            solver_.addElementToJacobian(id2+1, id2+1, dp2[1]*dAreaDy2);
             
          }
        }
-   }
 }
 
 //=============================================================================

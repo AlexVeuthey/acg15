@@ -82,30 +82,35 @@ $
 Forces are:\\\\
 $
 F_{spring0}=-\begin{pmatrix}
-(k_s + k_d) \frac{p_{x0}-p_{x1}}{||p_0-p_1||}\\
-(k_s + k_d) \frac{p_{y0}-p_{y1}}{||p_0-p_1||}\\
+(k_s(||p_0-p_1||-L) + k_d\frac{(\dot{x_0}-\dot{x_1}) \cdot (x_0-x_1)}{||p_0-p_1||}) \frac{x_0-x_1}{||p_0-p_1||}\\
+(k_s(||p_0-p_1||-L) + k_d\frac{(\dot{y_0}-\dot{y_1}) \cdot (y_0-y_1)}{||p_0-p_1||}) \frac{y_0-y_1}{||p_0-p_1||}\\
 \end{pmatrix}
 $\\\\
-For the particle $p_0$ with force $F_{spring0}$, the jacobian is\\\\
+This force can be cumbersome to calculate, so we separated it into 3 components:\\\\
 $
-J_{spring0}=\begin{pmatrix}
--(k_s+k_d)(\frac{(x_1-x_0) len'+len}{len^2}) 	&& (k_s+k_d)(\frac{(x_0-x_1) len'}{len^2})\\
-(k_s+k_d)(\frac{(y_0-y_1) len'}{len^2}) 	&& -(k_s+k_d)(\frac{(y_1-y_0) len'+len}{len^2})\\
-\end{pmatrix}
+Stiffness_x = k_s(||p_0-p_1||-L\\\\
+Damping_x = k_d\frac{(\dot{x_0}-\dot{x_1}) \cdot (x_0-x_1)}{||p_0-p_1||}\\\\
+Vector_x = \frac{y_0-y_1}{||p_0-p_1||}
 $\\\\
-This is only one of the 4 jacobian we have to calculate in order to have this force.\\
-The final jacobian will be a 4x4 matrix.
+Here are the three compenent for forces in x only, but the same applies to the forces in y.\\
+By taking the partial derivative for all four variables, for the three component, we can then calculate the jacobian for the damped-spring force in the form:\\
+$
+\frac{\partial}{\partial x_0} F_{spring0 x} = \frac{\partial}{\partial x_0} -(Stiffness+Damping)Vector
+$\\\\
+This makes the jacobian much easier to calculate and less suceptible to errors.\\
+The result jacobian is a 4X4 matrix as there are two particles acting on two forces:\\\\
+$\frac{\partial F_{spring0}}{\partial p_0}$, $\frac{\partial F_{spring1}}{\partial p_0}$, $\frac{\partial F_{spring0}}{\partial p_1}$ and $\frac{\partial F_{spring1}}{\partial p_1}$\\\\
+This calculation is done in the code in the function compute\_jacobians and the same principle has been applied to the damped spring forces of the mouse click except here, 
 \subsection*{Area preservation forces}
-The force is defined as:\\\\
+One of the force is defined as:\\\\
 $
 F_{area0}=-0.5dEA\begin{pmatrix}
 p_{y1}-p_{y2}\\
 p_{x2}-p_{x1}
 \end{pmatrix}
 $\\\\
-This will give a 3x3 sparse jacobian where:\\\\
-$\frac{\partial F_{area0}}{\partial p_{y1}} = -0.5dEA$\\\\
-$\frac{\partial F_{area0}}{\partial p_{x0}} = 0$
+The other forces are defined at the first chapter where we defined how we calculated the forces.\\
+Since we have 3 forces acting on 3 particles, this means that we have a 3X3 jacobian matrix. The way we calculated it is the same as the damped string forces. The calculation can get messy and won't be described here.
 
 \section*{Computation of the equilibrium force}
 In order to distribute the particles on the screen, we added a force that acts on every particles. They repulses themselves like same polarity charges in electromagnetism.\\
