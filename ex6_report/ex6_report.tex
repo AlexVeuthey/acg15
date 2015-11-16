@@ -25,9 +25,9 @@ By solving these equations, we get:\\\\
 $Fi=-\frac{\partial EA(x_0,x_1,x_2)}{\partial x_i}=k_A(area(x_0,x_1,x_2)-A)
 \frac {\partial area(x0,x1,x2)}{\partial x_i}$\\\\
 And by solving the partial derivative we get the following forces for each particles:\\\\
-$F_0=-0.5dEA(x_1.y-x_2.y, x_2.x-x_1.x)\\
-F_1=-0.5dEA(x_2.y-x_0.y, x_0.x-x_2.x)\\
-F_2=-0.5dEA(x_0.y-x_1.y, x_1.x-x_0.x)\\
+$F_0=-0.5dEA(x_{y1}-x_{y2}, x_{x2}-x_{x1})\\
+F_1=-0.5dEA(x_{y2}-x_{y0}, x_{x0}-x_{x2})\\
+F_2=-0.5dEA(x_{y0}-x_{y1}, x_{x1}-x_{x0})\\
 $where $dEA=k_A(area(x_0,x_1,x_2)-A)$
 
 \section*{Computation of the Jacobian}
@@ -79,9 +79,33 @@ J_{Col}=\begin{pmatrix}
 \end{pmatrix}
 $
 \subsection*{Damped-spring forces}
-TODO\\
+Forces are:\\\\
+$
+F_{spring0}=-\begin{pmatrix}
+(k_s + k_d) \frac{p_{x0}-p_{x1}}{||p_0-p_1||}\\
+(k_s + k_d) \frac{p_{y0}-p_{y1}}{||p_0-p_1||}\\
+\end{pmatrix}
+$\\\\
+For the particle $p_0$ with force $F_{spring0}$, the jacobian is\\\\
+$
+J_{spring0}=\begin{pmatrix}
+-(k_s+k_d)(\frac{(x_1-x_0) len'+len}{len^2}) 	&& (k_s+k_d)(\frac{(x_0-x_1) len'}{len^2})\\
+(k_s+k_d)(\frac{(y_0-y_1) len'}{len^2}) 	&& -(k_s+k_d)(\frac{(y_1-y_0) len'+len}{len^2})\\
+\end{pmatrix}
+$\\\\
+This is only one of the 4 jacobian we have to calculate in order to have this force.\\
+The final jacobian will be a 4x4 matrix.
 \subsection*{Area preservation forces}
-TODO\\
+The force is defined as:\\\\
+$
+F_{area0}=-0.5dEA\begin{pmatrix}
+p_{y1}-p_{y2}\\
+p_{x2}-p_{x1}
+\end{pmatrix}
+$\\\\
+This will give a 3x3 sparse jacobian where:\\\\
+$\frac{\partial F_{area0}}{\partial p_{y1}} = -0.5dEA$\\\\
+$\frac{\partial F_{area0}}{\partial p_{x0}} = 0$
 
 \section*{Computation of the equilibrium force}
 In order to distribute the particles on the screen, we added a force that acts on every particles. They repulses themselves like same polarity charges in electromagnetism.\\
