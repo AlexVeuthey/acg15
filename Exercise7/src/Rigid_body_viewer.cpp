@@ -199,12 +199,41 @@ void Rigid_body_viewer:: draw()
 
 void Rigid_body_viewer::compute_forces()
 { 
-    /** \todo Compute all forces acting on the rigid body
-     \li clear all forces
-     \li add gravity
-     \li add damping to linear and angular movement
-     \li add the mouse spring force
-     */
+   /** \todo Compute all forces acting on the rigid body
+   \li clear all forces
+   \li add gravity
+   \li add damping to linear and angular movement
+   \li add the mouse spring force
+   */
+   
+   //clear forces
+   body_.force = vec2(0.0, 0.0);
+   body_.torque = 0.0;
+   
+   //gravity
+   body_.force += vec2(0, -9.81*body_.mass);
+   
+   //damping
+   body_.force -= damping_linear_*body_.linear_velocity;
+   body_.torque -= damping_angular_*body_.angular_velocity;
+   
+   //taken from lab5
+   if (mouse_spring_.active){
+      //Particle& p0 = body_.particles[ mouse_spring_.particle_index ];
+      
+      //vec2 pos0 = p0.position;
+      vec2 pos0 = body_.position;
+      vec2 pos1 = mouse_spring_.mouse_position;
+      
+      float stiffness = spring_stiffness_*norm(pos0-pos1);
+      float damping = spring_damping_*dot(body_.linear_velocity,(pos0-pos1))/norm(pos0-pos1);
+      
+      vec2 force = -(stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
+      vec2 r = body_.r.at(mouse_spring_.particle_index);
+      
+      body_.force += force;
+      body_.torque += dot(perp(r), force);
+   }
 }
 
 
@@ -223,16 +252,24 @@ void Rigid_body_viewer::impulse_based_collisions()
 
 void Rigid_body_viewer::time_integration(float dt)
 {
-    // compute all forces
-    compute_forces();
-
-    /** \todo Implement explicit Euler time integration
-     \li update position and orientation
-     \li update linear and angular velocities
-     \li call update_points() at the end to compute the new particle positions
-     */
-    // handle collisions
-    impulse_based_collisions();
+   // compute all forces
+   compute_forces();
+   
+   /** \todo Implement explicit Euler time integration
+   \li update position and orientation
+   \li update linear and angular velocities
+   \li call update_points() at the end to compute the new particle positions
+   */
+   
+   body_.position = body_.position+dt*body_.linear_velocity;
+   body_.linear_velocity = body_.linear_velocity+dt*body_.force/body_.mass;  
+   body_.orientation = body_.orientation+dt*body_.angular_velocity;
+   body_.angular_velocity = body_.angular_velocity+dt*body_.torque/body_.inertia;
+   
+   // handle collisions
+   impulse_based_collisions();
+   
+   body_.update_points();
 }
 
 
