@@ -20,7 +20,6 @@
 
 //== IMPLEMENTATION ==========================================================
 
-
 Mass_spring_viewer::
 Mass_spring_viewer(const char* _title, int _width, int _height)
 : Viewer_2D(_title, _width, _height)
