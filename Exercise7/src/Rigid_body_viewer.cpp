@@ -231,8 +231,13 @@ void Rigid_body_viewer::compute_forces()
       vec2 force = -(stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
       vec2 r = body_.r.at(mouse_spring_.particle_index);
       
+      //find out the \bar{ri} as the r in body_ is the original body ri
+      const float s = sin(body_.orientation), c = cos(body_.orientation);
+      vec2 bar_r(c*r[0] + s*r[1], -s*r[0] + c*r[1]);
+      
+      //calculation of the angular forces
       body_.force += force;
-      body_.torque += dot(perp(r), force);
+      body_.torque += dot(perp(bar_r), force);
    }
 }
 
@@ -242,8 +247,9 @@ void Rigid_body_viewer::compute_forces()
 
 void Rigid_body_viewer::impulse_based_collisions()
 {
-    /** \todo Handle collisions based on impulses
-     */
+   /** \todo Handle collisions based on impulses
+   */
+   
 }
 
 
@@ -270,6 +276,7 @@ void Rigid_body_viewer::time_integration(float dt)
    impulse_based_collisions();
    
    body_.update_points();
+   
 }
 
 
