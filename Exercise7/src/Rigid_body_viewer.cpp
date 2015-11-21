@@ -231,13 +231,13 @@ void Rigid_body_viewer::compute_forces()
       vec2 force = -(stiffness+damping)*(pos0-pos1)/norm(pos0-pos1);
       vec2 r = body_.r.at(mouse_spring_.particle_index);
       
-      //find out the \bar{ri} as the r in body_ is the original body ri
+      //find out the ri as the r in body_ is the original body \bar{ri}
       const float s = sin(body_.orientation), c = cos(body_.orientation);
-      vec2 bar_r(c*r[0] + s*r[1], -s*r[0] + c*r[1]);
+      vec2 ri(c*r[0] + s*r[1], -s*r[0] + c*r[1]);
       
       //calculation of the angular forces
       body_.force += force;
-      body_.torque += dot(perp(bar_r), force);
+      body_.torque += dot(perp(ri), force);
    }
 }
 
@@ -247,9 +247,48 @@ void Rigid_body_viewer::compute_forces()
 
 void Rigid_body_viewer::impulse_based_collisions()
 {
-   /** \todo Handle collisions based on impulses
-   */
+   //elasticity constant (the \epsilon in the slides)
+   //set to to 0.9 so that shapes bounce around but can stay still
+   const float elasticity = 0.9f;
    
+   //lines of the scene
+   float planes[4][3] = {
+               {  0.0,  1.0, 1.0 },
+               {  0.0, -1.0, 1.0 },
+               {  1.0,  0.0, 1.0 },
+               { -1.0,  0.0, 1.0 }};
+   
+   for(int i = 0; i < body_.points.size(); i++){
+      vec2 pos = body_.points.at(i);
+      vec2 lin_vel = body_.linear_velocity;
+      float ang_vel = body_.angular_velocity;
+      for(int p = 0; p < 4; p++){
+      
+         float relativ_pos = pos[0]*planes[p][0]+pos[1]*planes[p][1]+planes[p][2];
+         
+         vec2 plan_normal(planes[p][0], planes[p][1]);
+         
+         //r is the orginal r (\bar{r}) ri is the transformed one
+         vec2 r = body_.r.at(i);
+         const float s = sin(body_.orientation), c = cos(body_.orientation);
+         vec2 ri(c*r[0] + s*r[1], -s*r[0] + c*r[1]);
+         
+         //vrel = only va- since the wall (vb) won't have any velocity
+         float vrel = dot(plan_normal, (lin_vel + ang_vel*perp(ri) ) );
+         
+         //if relativ_pos <= 0 then the particle is in the wall
+         if(relativ_pos <= 0 /*&& dot(plan_normal, body_.linear_velocity) < 0*/ && vrel < 0){
+            
+            float j = -(1+elasticity) * vrel;
+            j /= ( (1/body_.mass)+(1/body_.inertia)*pow(dot( perp(ri), plan_normal), 2) );
+            
+            vec2 J = j*plan_normal;
+            
+            body_.linear_velocity += (1/body_.mass)*J;
+            body_.angular_velocity += (1/body_.inertia)*dot(perp(ri), J);
+         }
+      }
+   }
 }
 
 
@@ -260,6 +299,8 @@ void Rigid_body_viewer::time_integration(float dt)
 {
    // compute all forces
    compute_forces();
+   
+   body_.update_points();
    
    /** \todo Implement explicit Euler time integration
    \li update position and orientation
@@ -274,9 +315,6 @@ void Rigid_body_viewer::time_integration(float dt)
    
    // handle collisions
    impulse_based_collisions();
-   
-   body_.update_points();
-   
 }
 
 
