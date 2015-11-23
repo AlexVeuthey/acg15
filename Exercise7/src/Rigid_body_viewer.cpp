@@ -219,7 +219,6 @@ void Rigid_body_viewer::compute_forces()
    
    //taken from lab5
    if (mouse_spring_.active){
-      //Particle& p0 = body_.particles[ mouse_spring_.particle_index ];
       
       //vec2 pos0 = p0.position;
       vec2 pos0 = body_.position;
@@ -235,7 +234,7 @@ void Rigid_body_viewer::compute_forces()
       const float s = sin(body_.orientation), c = cos(body_.orientation);
       vec2 ri(c*r[0] + s*r[1], -s*r[0] + c*r[1]);
       
-      //calculation of the angular forces
+      //calculation of the linear force and the angular force
       body_.force += force;
       body_.torque += dot(perp(ri), force);
    }
@@ -277,7 +276,8 @@ void Rigid_body_viewer::impulse_based_collisions()
          float vrel = dot(plan_normal, (lin_vel + ang_vel*perp(ri) ) );
          
          //if relativ_pos <= 0 then the particle is in the wall
-         if(relativ_pos <= 0 /*&& dot(plan_normal, body_.linear_velocity) < 0*/ && vrel < 0){
+         //if vrel < 0 then the particle is going into the wall
+         if(relativ_pos <= 0 && vrel < 0){
             
             float j = -(1+elasticity) * vrel;
             j /= ( (1/body_.mass)+(1/body_.inertia)*pow(dot( perp(ri), plan_normal), 2) );
@@ -302,11 +302,6 @@ void Rigid_body_viewer::time_integration(float dt)
    
    body_.update_points();
    
-   /** \todo Implement explicit Euler time integration
-   \li update position and orientation
-   \li update linear and angular velocities
-   \li call update_points() at the end to compute the new particle positions
-   */
    
    body_.position = body_.position+dt*body_.linear_velocity;
    body_.linear_velocity = body_.linear_velocity+dt*body_.force/body_.mass;  
